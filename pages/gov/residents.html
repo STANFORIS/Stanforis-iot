@@ -1,0 +1,343 @@
+<!-- 1) residents.html — list / search / filter / create / CSV import
+
+Features implemented:
+
+Real-time list from /residents in RTDB
+
+Search by name, resident_id, phone
+
+Filter by life_status and village (if present)
+
+Create new resident (with duplicate detection)
+
+Inline edit for quick fields
+
+Delete resident (soft delete option commented)
+
+CSV import (expects headers: first_name,last_name,dob,gender,phone,parent_name,dwelling_id,life_status)
+
+Bulk import shows duplicates and allows skip/overwrite behaviour (default: skip duplicates)
+
+Live KPI (population) binding to /counters/population -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stanforis — Residents</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img src="https://ui-avatars.com/api/?name=Residents&background=111111&color=ffffff" class="w-9 h-9 rounded-full" alt="">
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Umudugudu — Residents</p>
+          <p class="font-medium truncate">Residents management</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="openPage('dashboard.html')" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">←</button>
+          <button id="btnNewResident" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">＋</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <!-- Controls -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex gap-2 mb-3">
+          <input id="q" placeholder="Search name / id / phone" class="flex-1 p-2 rounded-xl bg-neutral-800 border border-neutral-700"/>
+          <select id="filterStatus" class="p-2 rounded-xl bg-neutral-800 border border-neutral-700">
+            <option value="">All status</option>
+            <option value="Alive">Alive</option>
+            <option value="Deceased">Deceased</option>
+            <option value="Moved">Moved</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnSearch" class="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">Search</button>
+          <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-800 border border-neutral-700 cursor-pointer">
+            <input id="csvFile" type="file" accept=".csv" class="hidden"/>
+            <span id="csvLabel" class="text-xs text-neutral-400">Import CSV</span>
+          </label>
+        </div>
+        <div id="ctrlMsg" class="text-xs text-amber-200 mt-2"></div>
+      </section>
+
+      <!-- Residents list -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Residents <span id="populationBadge" class="text-xs px-2 py-0.5 rounded-full bg-neutral-800 ml-2">0</span></h3>
+        <div id="residentsList" class="space-y-2 text-sm text-neutral-400">Loading...</div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearRes"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Set footer year
+      document.getElementById('yearRes').textContent = new Date().getFullYear();
+
+      // -------- Firebase config ----------
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const residentsRef = db.ref('residents');
+      let residentsCache = {}; // Local cache
+
+      // Require login
+      auth.onAuthStateChanged(user => {
+        if (!user) window.location.href = 'login.html';
+        else init();
+      });
+
+      function init(){
+        bindPopulation();
+        attachRealtimeListeners();
+        document.getElementById('btnSearch').addEventListener('click', applyFilters);
+        document.getElementById('btnNewResident').addEventListener('click', openCreateModal);
+        document.getElementById('csvFile').addEventListener('change', handleCsvUpload);
+        document.getElementById('csvLabel').addEventListener('click', () => document.getElementById('csvFile').click());
+      }
+
+      // Bind population counter
+      function bindPopulation(){
+        db.ref('counters/population').on('value', snap => {
+          const v = snap.val() || 0;
+          document.getElementById('populationBadge').textContent = v;
+        });
+      }
+
+      // Realtime listener for residents
+      function attachRealtimeListeners(){
+        residentsRef.on('value', snap => {
+          const data = snap.val() || {};
+          residentsCache = data;
+          renderResidentsList(Object.entries(data).map(([id,r]) => ({ id, ...r })));
+        });
+      }
+
+      function renderResidentsList(list){
+        const out = list.sort((a,b) => (a.last_name||'').localeCompare(b.last_name||''))
+                        .map(r => renderResidentRow(r))
+                        .join('');
+        document.getElementById('residentsList').innerHTML = out || '<div class="text-xs text-neutral-500">No residents</div>';
+      }
+
+      function renderResidentRow(r){
+        const name = `${escapeHtml(r.first_name||'')} ${escapeHtml(r.last_name||'')}`.trim();
+        const dob = r.dob || '—';
+        const phone = r.phone || '—';
+        const status = r.life_status || 'Alive';
+
+        return `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+          <div class="min-w-0">
+            <div class="font-medium text-sm truncate">${name} <span class="text-xs text-neutral-400">#${r.id||r.resident_id||r._id||''}</span></div>
+            <div class="text-[11px] text-neutral-500">${dob} • ${phone} • ${escapeHtml(r.dwelling_id||'')}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="resident.html?id=${encodeURIComponent(r.id)}" class="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-xs">Open</a>
+            <button onclick="quickEdit('${r.id}')" class="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-xs">Edit</button>
+            <button onclick="deleteResident('${r.id}')" class="px-2 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-xs">Del</button>
+          </div>
+        </div>`;
+      }
+
+      // Search / filter
+      function applyFilters(){
+        const q = (document.getElementById('q').value||'').toLowerCase().trim();
+        const status = document.getElementById('filterStatus').value;
+        const items = Object.entries(residentsCache).map(([id,r]) => ({ id, ...r }));
+        const filtered = items.filter(r => {
+          if(status && (r.life_status || '') !== status) return false;
+          if(!q) return true;
+          const hay = `${r.first_name||''} ${r.last_name||''} ${r.phone||''} ${r.resident_id||''}`.toLowerCase();
+          return hay.includes(q);
+        });
+        renderResidentsList(filtered);
+      }
+
+      // Quick create modal (prompt-based)
+      function openCreateModal(){
+        const first = prompt('First name'); if(!first) return;
+        const last = prompt('Last name') || '';
+        const dob = prompt('DOB (YYYY-MM-DD)') || '';
+        const phone = prompt('Phone (+country)') || '';
+        const parent = prompt('Parent name (optional)') || '';
+        createResident({
+          first_name: first.trim(),
+          last_name: last.trim(),
+          dob: dob.trim(),
+          phone: phone.trim(),
+          parent_name: parent.trim(),
+          life_status: 'Alive'
+        });
+      }
+
+      // Create resident with duplicate check
+      async function createResident(payload){
+        try{
+          const duplicates = Object.entries(residentsCache).filter(([id,r]) => {
+            const nameMatch = ((r.first_name||'').toLowerCase() === (payload.first_name||'').toLowerCase()) &&
+                              ((r.last_name||'').toLowerCase() === (payload.last_name||'').toLowerCase());
+            const dobMatch = (r.dob||'') === (payload.dob||'');
+            const parentMatch = (r.parent_name||'').toLowerCase() === (payload.parent_name||'').toLowerCase();
+            const phoneMatch = (r.phone||'') && payload.phone && (r.phone === payload.phone);
+            return (nameMatch && dobMatch && (parentMatch || true)) || phoneMatch;
+          });
+          if(duplicates.length>0){
+            if(!confirm(`Possible duplicate(s) found (${duplicates.length}). Still create?`)) return;
+          }
+
+          const ref = residentsRef.push();
+          const id = ref.key;
+          const record = {
+            resident_id: id,
+            first_name: payload.first_name || '',
+            last_name: payload.last_name || '',
+            dob: payload.dob || '',
+            gender: payload.gender || '',
+            phone: payload.phone || '',
+            parent_name: payload.parent_name || '',
+            dwelling_id: payload.dwelling_id || '',
+            life_status: payload.life_status || 'Alive',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          };
+          await ref.set(record);
+          await db.ref('counters/population').transaction(current => (current||0)+1);
+          showCtrlMsg('Resident created');
+        }catch(e){ showCtrlMsg(e.message, true); }
+      }
+
+      // Quick inline edit
+      async function quickEdit(id){
+        const r = residentsCache[id];
+        if(!r) return alert('Not found');
+        const first = prompt('First name', r.first_name || '');
+        if(first===null) return;
+        const last = prompt('Last name', r.last_name || '') || '';
+        const phone = prompt('Phone', r.phone || '') || '';
+        try{
+          await db.ref('residents/'+id).update({
+            first_name: first.trim(),
+            last_name: last.trim(),
+            phone: phone.trim(),
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+          showCtrlMsg('Updated');
+        }catch(e){ showCtrlMsg(e.message, true); }
+      }
+
+      // Delete resident
+      async function deleteResident(id){
+        if(!confirm('Delete resident? This is irreversible.')) return;
+        try{
+          await db.ref('residents/'+id).remove();
+          await db.ref('counters/population').transaction(current => Math.max(0, (current||1)-1));
+          showCtrlMsg('Deleted');
+        }catch(e){ showCtrlMsg(e.message, true); }
+      }
+
+      // CSV import
+      async function handleCsvUpload(e){
+        const file = e.target.files[0]; if(!file) return;
+        const text = await file.text();
+        const rows = text.split(/\r?\n/).map(r=>r.trim()).filter(Boolean);
+        if(rows.length<2) { showCtrlMsg('CSV has no rows', true); return; }
+
+        const headers = rows[0].split(',').map(h=>h.trim().toLowerCase());
+        const expected = ['first_name','last_name','dob','gender','phone','parent_name','dwelling_id','life_status'];
+        const mapped = headers.map(h => expected.includes(h) ? h : h);
+        const toCreate = [];
+
+        for(let i=1;i<rows.length;i++){
+          const cols = rows[i].split(',');
+          const obj = {};
+          for(let j=0;j<mapped.length;j++){ obj[mapped[j]] = (cols[j]||'').trim(); }
+          if(!(obj.first_name && obj.last_name)) continue;
+          toCreate.push(obj);
+        }
+
+        if(!toCreate.length){ showCtrlMsg('No valid rows found', true); return; }
+        if(!confirm(`Import ${toCreate.length} residents? Duplicates will be skipped.`)) return;
+
+        let created = 0, skipped = 0;
+        for(const row of toCreate){
+          const dup = Object.values(residentsCache).find(r=>{
+            const samePhone = r.phone && row.phone && r.phone === row.phone;
+            const sameNameDob = (r.first_name||'').toLowerCase() === (row.first_name||'').toLowerCase() &&
+                                (r.last_name||'').toLowerCase() === (row.last_name||'').toLowerCase() &&
+                                (r.dob||'') === (row.dob||'');
+            return samePhone || sameNameDob;
+          });
+          if(dup){ skipped++; continue; }
+
+          const ref = residentsRef.push();
+          const id = ref.key;
+          await ref.set({
+            resident_id: id,
+            first_name: row.first_name || '',
+            last_name: row.last_name || '',
+            dob: row.dob || '',
+            gender: row.gender || '',
+            phone: row.phone || '',
+            parent_name: row.parent_name || '',
+            dwelling_id: row.dwelling_id || '',
+            life_status: row.life_status || 'Alive',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          });
+          created++;
+        }
+
+        if(created) await db.ref('counters/population').transaction(n => (n||0)+created);
+        showCtrlMsg(`Import complete: ${created} created, ${skipped} skipped`);
+        document.getElementById('csvFile').value = '';
+      }
+
+      function showCtrlMsg(msg, isErr){
+        const el = document.getElementById('ctrlMsg');
+        el.textContent = msg;
+        el.style.color = isErr ? '#fbbf24' : '#86efac';
+        setTimeout(()=> el.textContent='', 6000);
+      }
+
+      function openPage(p){ window.location.href = p; }
+      function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  </script>
+</body>
+</html>

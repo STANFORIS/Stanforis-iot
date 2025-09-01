@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stanforis Rwanda</title>
+  <link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark light }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-thumb{background:#2f2f2f;border-radius:8px}
+
+    /* Side rail positioning */
+    .side-rail{position:absolute;top:64px;bottom:84px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+
+    /* Base buttons */
+    .rightrail-btn,.leftrail-btn {
+      width: 18px;height: 18px;border-radius: 4px;background: #3a3a3a;
+      display: flex;align-items: center;justify-content: center;
+      position: relative;cursor: pointer;transition: background 0.2s ease;
+    }
+
+    /* Glow animation when active (first tap) */
+    .rightrail-btn.active,.leftrail-btn.active {
+      background: #000;box-shadow: 0 0 6px #22d3ee, 0 0 12px #22d3ee inset;
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+      from { box-shadow: 0 0 6px #22d3ee, 0 0 12px #22d3ee inset; }
+      to   { box-shadow: 0 0 12px #22d3ee, 0 0 20px #22d3ee inset; }
+    }
+
+    /* Tooltip */
+    .rightrail-btn .tooltip,.leftrail-btn .tooltip {
+      position: absolute; bottom: 120%;left: 50%; transform: translateX(-50%);
+      background: #111;color: white;font-size: 9px;padding: 2px 6px;border-radius: 6px;
+      white-space: nowrap;opacity: 0;pointer-events: none;
+      transition: opacity 0.2s ease-in-out;box-shadow: 0 0 6px #22d3ee; z-index: 50;
+    }
+    .rightrail-btn .tooltip::after,.leftrail-btn .tooltip::after {
+      content: ""; position: absolute; top: 100%;left: 50%; transform: translateX(-50%);
+      border-width: 4px; border-style: solid;
+      border-color: #111 transparent transparent transparent;
+    }
+    .rightrail-btn.active .tooltip,.leftrail-btn.active .tooltip { opacity: 1; }
+
+    /* Misc elements */
+    #analogClock { width: 260px; height: 260px }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom) }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar" src="../../img/avatar-placeholder.png" alt="avatar" class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer" title="Click to update profile picture" /> 
+        <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Governor</p>
+          <p id="username" class="font-medium truncate">Progress........</p>
+        </div>
+        <div id="sync-status" 
+             class="fixed bottom-4 right-4 px-3 py-2 rounded-full shadow-md bg-gray-800 text-white text-xs 
+                    flex items-center gap-2 cursor-pointer transition-all duration-300 overflow-hidden w-8 hover:w-48">
+          <span id="status-dot" class="w-3 h-3 rounded-full bg-gray-400"></span>
+          <span id="status-text" class="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Checking...</span>
+        </div>
+        <div class="flex gap-2">
+          <a href="notifications.html" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" title="Notifications" id="btnNotifications">🔔</a>
+          <a href="connection.html" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" title="Settings">📶</a>
+        </div>
+      </div>
+    </header>
+
+
+
+
+    <div class="side-rail left-0 pl-2 hidden sm:flex">
+        <button class="leftrail-btn" data-action="power_Saving">🔋<span class="tooltip">Power Saving</span></button>
+        <button class="leftrail-btn" data-action="brightnessManager">🔆<span class="tooltip"> System Brightness Manager</span></button>
+        <button class="leftrail-btn" data-action="videoRecord_Save">🎥<span class="tooltip"> Video Record & Save</span></button>
+        <button class="leftrail-btn" data-action="snapshot_Save">📸<span class="tooltip"> Snapshot & Save</span></button>
+        <button class="leftrail-btn" data-action="zoomControl">⛶<span class="tooltip"> Zoom Control</span></button>
+        <button class="leftrail-btn" data-action="micToggle">🎤<span class="tooltip"> Microphone Toggle</span></button>
+        <button class="leftrail-btn" data-action="speakerToggle"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 9 9 9 13 5 13 19 9 15 3 15"/><path d="M16 8a4 4 0 0 1 0 8"/><path d="M19 5a8 8 0 0 1 0 14"/></svg><span class="tooltip">Speaker Toggle</span></button>
+        <button class="leftrail-btn" data-action="nightVision_Manager">👁️<span class="tooltip">Night Vision Manager</span></button>
+        <button class="leftrail-btn" data-action="cameraCycle">🔄<span class="tooltip"> Camera Cycle</span></button>
+        <button class="leftrail-btn" data-action="camera_ConfigurationManager">🛠️<span class="tooltip"> Camera Config</span></button>
+        <button class="leftrail-btn" data-action="cameraSensors_TroubleShoot">📽️<span class="tooltip">Camera Troubleshoot</span></button>
+        <!-- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// -->
+        <button class="leftrail-btn" data-action="homelights_ToggleControls">💡<span class="tooltip"> Home Lights Control</span></button>
+        <button class="leftrail-btn" data-action="dimLights">🔆<span class="tooltip"> Diming Lights</span></button>
+        <button class="leftrail-btn" data-action="smokeSensor">🔥<span class="tooltip"> Smoke Sensor</span></button>
+        <button class="leftrail-btn" data-action="glassBreakSensor">🪟<span class="tooltip"> Glass Break Sensor</span></button>
+        <button class="leftrail-btn" data-action="panicButton">🚨<span class="tooltip"> Panic Button</span></button>
+        <button class="leftrail-btn" data-action="alarmTrigger">🔔<span class="tooltip"> Alarm Trigger</span></button>
+        <button class="leftrail-btn" data-action="unusualSoundDetectors">🔊<span class="tooltip"> Unusual Sound Detector</span></button>
+        <button class="leftrail-btn" data-action="securityMode"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1l9 4v6c0 5-3.58 9.74-9 11-5.42-1.26-9-6-9-11V5l9-4z"/><line x1="12" y1="10" x2="12" y2="14"/></svg><span class="tooltip">Security Mode</span></button>
+        <button class="leftrail-btn" data-action="remote_EmergencyTrigger">⚠️<span class="tooltip"> Remote Emergency</span></button>
+    </div>
+        <!-- RIGHT Side Rail -->
+    <div class="side-rail right-0 pr-2 hidden sm:flex">
+        <button class="rightrail-btn" data-action="ac_Monitor"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 12 10 16 14 8 18 12"/> </svg><span class="tooltip">DC Monitor</span></button>
+        <button class="rightrail-btn" data-action="dc_Monitor">➡️<span class="tooltip">DC Monitor</span></button>
+        <button class="rightrail-btn" data-action="gateControl">⛩️<span class="tooltip">Gate Control</span></button>
+        <button class="rightrail-btn" data-action="powerRelays_Control">🏒<span class="tooltip">🔛 Power Relays</span></button>
+        <button class="rightrail-btn" data-action="home_Electrical_Cirquit_Manager">🔌<span class="tooltip">Electrical Manager</span></button>
+        <button class="rightrail-btn" data-action="curtainControl">CC<span class="tooltip">Cirquit Control</span></button>
+        <!-- ///////////////////////////////////////////////////////////////////////////////////////////////////////// -->
+        <button class="rightrail-btn" data-action="doorsRelayManager">🚪<span class="tooltip">Doors Relay Manager</span></button>
+        <button class="rightrail-btn" data-action="sprinklers_Control_Toggles">🚿<span class="tooltip">Sprinklers</span></button>
+        <button class="rightrail-btn" data-action="home_Envornment_Manager">🌳<span class="tooltip">Environment Manager</span></button>
+        <!-- ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// -->
+        <button class="rightrail-btn" data-action="service_Toggle1">⏲<span class="tooltip"> Service Toggle 1</span></button>
+        <button class="rightrail-btn" data-action="service_Toggle2">🚑<span class="tooltip"> Service Toggle 2</span></button>
+        <button class="rightrail-btn" data-action="service_Toggle3">🏍️<span class="tooltip"> Service Toggle 3</span></button>
+        <button class="rightrail-btn" data-action="service_Toggle4">👨‍🔧<span class="tooltip"> Service Toggle 4</span></button>
+        <button class="rightrail-btn" data-action="service_Toggle5">🛍️<span class="tooltip"> Service Toggle 5</span></button>
+        <button class="rightrail-btn" data-action="service_Toggle6">6<span class="tooltip"> Service Toggle 6</span></button>
+        <!-- ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// -->
+        <button class="rightrail-btn" data-action="reminder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="14"/></svg><span class="tooltip">Reminder</span></button>
+        <button class="rightrail-btn" data-action="data_stock">🗂️<span class="tooltip">Data Stock</span></button>
+        <button class="rightrail-btn" data-action="energySaver">♻️<span class="tooltip">Optimization</span></button>
+        <button class="rightrail-btn" data-action="iot_connection_level">🖧<span class="tooltip">IoT Manager</span></button>
+        <button class="rightrail-btn" data-action="iotLogs">📜<span class="tooltip"> IoT Logs</span></button>
+    </div>
+
+
+
+    <!-- Floating Control Panel -->
+    <div id="controlPanel" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+      <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-4 w-80 max-w-[90%] relative">
+        <button id="closePanel" class="absolute top-2 right-2 text-white">✖️</button>
+        <h3 id="panelTitle" class="font-semibold text-lg mb-4">Control Panel</h3>
+        <div id="panelContent" class="space-y-3"></div>
+        <button id="panelConfirm" class="mt-4 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white">Apply</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <!-- KPI Cards -->
+      <section aria-labelledby="quick-actions-title">
+        <div class="flex space-x-3 overflow-x-auto pb-2">
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('devices.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>📟</span><span>Devices</span></div><div class="text-lg font-semibold" id="kpiDevices">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('alerts.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>📢</span><span>Alerts</span></div><div class="text-lg font-semibold" id="kpiAlerts">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('automation.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>🖇️</span><span>Automation</span></div><div class="text-lg font-semibold" id="kpiAutomation">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('contacts.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>📞</span><span>Contacts</span></div><div class="text-lg font-semibold" id="kpiContacts">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('emergency.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>🆘</span><span>Emergency</span></div><div class="text-lg font-semibold" id="kpiEmergency">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('load-familiars.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>👥</span><span>Familiars</span></div><div class="text-lg font-semibold" id="kpiFamiliars">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('logs.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>🗂️</span><span>Logs</span></div><div class="text-lg font-semibold" id="kpiLogs">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('notifications.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>🔔</span><span>Notifications</span></div><div class="text-lg font-semibold" id="kpiNotifications">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('register-familiar.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>📝</span><span>Registration</span></div><div class="text-lg font-semibold" id="kpiRegistration">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('settings.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>⚙️</span><span>Settings</span></div><div class="text-lg font-semibold" id="kpiSettings">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('support.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>ⓘ</span><span>Support</span></div><div class="text-lg font-semibold" id="kpiSupport">0</div></button>
+        <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('about.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span>ℹ️</span><span>About</span></div><div class="text-lg font-semibold" id="kpiAbout">0</div></button></div>
+      </section>
+
+      <!-- ESP Camera Section -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 overflow-hidden">
+        <div class="px-4 pt-3 flex items-center gap-3">
+          <h3 class="font-medium">Stanforis Live Streaming ...</h3>
+          <span id="streamStatusBadge" class="ml-auto text-xs px-2 py-0.5 rounded-full bg-red-600/20 text-red-300 border border-red-800">Stream offline</span>
+          <label class="inline-flex items-center gap-2 select-none">
+            <span class="text-xs text-neutral-400">Live</span>
+            <input id="streamToggle" type="checkbox" class="peer hidden" />
+            <span class="w-10 h-5 rounded-full bg-neutral-700 peer-checked:bg-emerald-600 relative transition">
+              <span class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transform peer-checked:translate-x-5 transition"></span>
+            </span>
+          </label>
+        </div>
+        <div class="px-4 pb-3 text-xs text-neutral-400">System status: <span id="systemStatus">Idle</span></div>
+        <div class="bg-black aspect-video grid place-items-center">
+          <div id="streamPlaceholder" class="text-neutral-400 text-sm">No stream. Toggle "Live" to simulate.</div>
+          <video id="streamVideo" class="w-full h-full hidden" autoplay muted playsinline></video>
+        </div>
+      </section>
+
+
+       <!------------------------------------------------------- Detection & Recognition Buttons --------------------------------------->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex justify-between items-center gap-4">
+          <button class="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="detection">Detection</button>
+          <button class="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="result">Result</button>
+          <button class="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="recognition">Recognition</button>
+        </div>
+        <!----------------------------------------------------------- CLOCK -------------------------------------------->
+        <div class="flex flex-col items-center gap-4 mt-4">
+          <canvas id="analogClock" aria-label="Analog Clock"></canvas>
+          <div class="grid grid-cols-3 gap-2 w-full">
+            <button class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="timerStart">Start</button>
+            <button class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="timerPause">Pause</button>
+            <button class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" data-action="timerReset">Reset</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+
+
+
+
+    <!-- Footer -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-10 text-center text-[14px]">
+            <a href="./gov/dashboard.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white hover:bg-white hover:text-black transition-colors duration-300 ease-in-out shadow-md active:scale-95">
+              Rwanda civic management and governance system
+            </a>
+          </div>
+          <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">
+            ©<span id="year"></span> Stanforis Rwanda — All rights reserved | Proudly , The Product Of Rwanda.
+          </div>
+        </nav>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function openPage(page){ window.location.href = page; }
+    function toast(msg){ alert(msg); }
+
+    // Stream Toggle
+    const streamToggle = document.getElementById('streamToggle');
+    streamToggle.addEventListener('change', e => {
+      const on = e.target.checked;
+      const badge = document.getElementById('streamStatusBadge');
+      const sys = document.getElementById('systemStatus');
+      const ph = document.getElementById('streamPlaceholder');
+      const vid = document.getElementById('streamVideo');
+      if(on){
+        badge.textContent='Stream online';
+        badge.className='ml-auto text-xs px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300 border border-emerald-800';
+        sys.textContent='Streaming';
+        ph.classList.add('hidden');
+        vid.classList.remove('hidden');
+      } else {
+        badge.textContent='Stream offline';
+        badge.className='ml-auto text-xs px-2 py-0.5 rounded-full bg-red-600/20 text-red-300 border border-red-800';
+        sys.textContent='Idle';
+        ph.classList.remove('hidden');
+        vid.classList.add('hidden');
+      }
+    });
+
+    // // Side Rail Button Tap Logic
+    // document.querySelectorAll('.leftrail-btn, .rightrail-btn').forEach(btn=>{
+    //   let tapTimeout=null;
+    //   btn.addEventListener('click',()=>{
+    //     if(btn.classList.contains('active')){
+    //       clearTimeout(tapTimeout);
+    //       btn.classList.remove('active');
+    //       toast("Launching: "+btn.dataset.action);
+    //     } else {
+    //       btn.classList.add('active');
+    //       tapTimeout=setTimeout(()=>btn.classList.remove('active'),2000);
+    //     }
+    //   });
+    // });
+
+    // Side Rail Button Tap Logic with IoT API Integration
+    document.querySelectorAll('.leftrail-btn, .rightrail-btn').forEach(btn => {
+      let tapTimeout = null;
+
+      btn.addEventListener('click', async () => {
+        const action = btn.dataset.action;
+
+        if (btn.classList.contains('active')) {
+          clearTimeout(tapTimeout);
+          btn.classList.remove('active');
+          toast("Launching: " + action);
+
+          // Trigger IoT API command
+          if (window.DashboardAPI?.iotCommand) {
+            try {
+              const { tenant, uid } = window.DashboardAPI.getState();
+              await window.DashboardAPI.iotCommand(tenant, uid, action);
+              console.log(`IoT command sent: ${action}`);
+            } catch (err) {
+              console.error(`IoT command failed for ${action}:`, err);
+              toast(`Command failed: ${action}`);
+            }
+          }
+
+        } else {
+          btn.classList.add('active');
+          tapTimeout = setTimeout(() => btn.classList.remove('active'), 2000);
+        }
+      });
+    });
+
+
+
+
+
+    // Analog Clock
+    const canvas=document.getElementById('analogClock');
+    const ctx=canvas.getContext('2d');
+    function resizeClock(){
+      const size=Math.min(300,Math.floor(window.innerWidth*0.7));
+      canvas.width=canvas.height=Math.max(180,size);
+    }
+    function drawClock(){
+      const w=canvas.width,h=canvas.height,r=w/2;
+      ctx.clearRect(0,0,w,h); ctx.save(); ctx.translate(r,r);
+      ctx.beginPath(); ctx.arc(0,0,r-6,0,Math.PI*2); ctx.fillStyle='#0b0b0b'; ctx.fill();
+      ctx.lineWidth=6; ctx.strokeStyle='#2b2b2b'; ctx.stroke();
+      for(let i=0;i<60;i++){
+        ctx.rotate(Math.PI/30); ctx.beginPath(); ctx.moveTo(0,-r+12);
+        ctx.lineTo(0,-r+(i%5===0?24:18));
+        ctx.lineWidth=i%5===0?3:1; ctx.strokeStyle='#6b7280'; ctx.stroke();
+      }
+      const now=new Date(); let sec=now.getSeconds(), min=now.getMinutes(), hr=now.getHours()%12;
+      hr=hr*Math.PI/6+min*Math.PI/360; min=min*Math.PI/30+sec*Math.PI/1800; sec=sec*Math.PI/30;
+      function hand(angle,length,lw){ctx.beginPath();ctx.rotate(angle);ctx.moveTo(0,10);ctx.lineTo(0,-length);ctx.lineWidth=lw;ctx.strokeStyle='#e5e7eb';ctx.stroke();ctx.rotate(-angle);}
+      hand(hr,r*0.5,6); hand(min,r*0.75,4); ctx.strokeStyle='#ef4444'; hand(sec,r*0.85,2);
+      ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI*2); ctx.fillStyle='#e5e7eb'; ctx.fill();
+      ctx.restore();
+    }
+    resizeClock(); drawClock(); setInterval(drawClock,1000);
+    window.addEventListener('resize',()=>{resizeClock(); drawClock();});
+
+
+  </script>
+
+  <!-- Module Scripts -->
+  <script type="module" src="../js/app.js"></script>
+  <script type="module" src="../js/pages/dashboard.js"></script>
+  <script type="module" src="../js/pages/api/kpiBinder.js"></script>
+  <script type="module" src="../js/pages/api/uiBinder.js"></script>
+</body>
+</html>

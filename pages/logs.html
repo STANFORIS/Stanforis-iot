@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>System Logs</title>
+<link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark light }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom) }
+    .scrollbar-thin::-webkit-scrollbar { height:8px; width:8px }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background:#2f2f2f; border-radius:8px }
+    .log-row { transition: transform 0.15s ease, background 0.15s ease; }
+    .log-row:hover { transform: translateY(-1px); background: rgba(16,185,129,0.1); }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center justify-between px-4 h-16">
+        <div>
+          <h1 class="text-lg font-semibold truncate">📝 System Logs</h1>
+          <p class="text-[11px] text-neutral-400">View and manage system logs</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm" data-action="refresh">🔄 Refresh</button>
+          <button class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm" data-action="export">📤 Export</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="px-4 py-3 space-y-3 border-b border-neutral-800 bg-neutral-950/70 backdrop-blur-sm sticky top-16 z-20">
+      <div class="flex gap-2">
+        <input id="search" class="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm focus:ring-1 focus:ring-emerald-500" placeholder="Search logs…" data-filter="query" />
+        <button class="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm hover:bg-neutral-800" data-action="clear-filters">✖ Clear</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <select class="bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1 text-sm" data-filter="device">
+          <option value="">All Devices</option>
+        </select>
+        <select class="bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1 text-sm" data-filter="type">
+          <option value="">All Types</option>
+          <option value="info">ℹ️ Info</option>
+          <option value="warning">⚠️ Warning</option>
+          <option value="error">❌ Error</option>
+        </select>
+        <select class="bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1 text-sm" data-sort>
+          <option value="time">Sort by Time</option>
+          <option value="device">Sort by Device</option>
+          <option value="type">Sort by Type</option>
+        </select>
+        <div class="ml-auto flex items-center gap-1">
+          <button class="px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-800 hover:bg-neutral-800" title="Grid" data-view="grid">▦</button>
+          <button class="px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-800 hover:bg-neutral-800" title="Table" data-view="table">▤</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="px-4 pt-4 pb-24 space-y-6">
+
+      <!-- GRID VIEW -->
+      <section id="gridView" class="grid grid-cols-1 sm:grid-cols-2 gap-4" data-view-panel="grid">
+        <div id="logsGrid" class="contents"></div>
+      </section>
+
+      <!-- TABLE VIEW -->
+      <section id="tableView" class="overflow-x-auto rounded-2xl border border-neutral-800" data-view-panel="table" hidden>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-neutral-900/80">
+              <th class="p-2"><input type="checkbox" data-select-all/></th>
+              <th class="p-2 text-left">Time</th>
+              <th class="p-2">Device</th>
+              <th class="p-2">Type</th>
+              <th class="p-2">Message</th>
+              <th class="p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="6" class="p-4 text-neutral-500 text-center">No logs available</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Pagination -->
+      <section class="flex items-center justify-between text-xs text-neutral-400">
+        <div>Showing <span data-results-current>0</span> of <span data-results-total>0</span></div>
+        <div class="flex items-center gap-1">
+          <button class="px-2 py-1 rounded bg-neutral-900 border border-neutral-800 hover:bg-neutral-800" data-page="prev">Prev</button>
+          <span data-page-current>1</span>/<span data-page-total>1</span>
+          <button class="px-2 py-1 rounded bg-neutral-900 border border-neutral-800 hover:bg-neutral-800" data-page="next">Next</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- INSPECTOR PANEL -->
+    <aside id="inspector" class="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] bg-neutral-950/95 backdrop-blur border-l border-neutral-800 z-40 translate-x-full transition-transform">
+      <div class="h-16 flex items-center justify-between px-4 border-b border-neutral-800 bg-neutral-900/80 sticky top-0">
+        <h3 class="font-medium" data-panel-title>Log Details</h3>
+        <button class="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm" data-action="close-panel">Close</button>
+      </div>
+      <div class="p-4 space-y-4 overflow-y-auto h-[calc(100%-4rem)]">
+        <div data-tab-panel="details" class="space-y-3">
+          <div class="text-sm">Time: <span data-field="time">-</span></div>
+          <div class="text-sm">Device: <span data-field="device">-</span></div>
+          <div class="text-sm">Type: <span data-field="type">-</span></div>
+          <div class="text-sm">Message: <span data-field="message">-</span></div>
+          <div class="text-sm">Severity: <span data-field="severity">-</span></div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs" data-action="edit">Edit</button>
+          <button class="flex-1 px-3 py-2 rounded-xl bg-red-600/20 text-red-300 border border-red-800 hover:bg-red-600/30 text-xs" data-action="delete">Delete</button>
+        </div>
+      </div>
+    </aside>
+    <!-- Bottom Panel -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-3 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-2">
+          © <span id="year"></span> Stanforis Rwanda— All rights reserved
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Log Card Template -->
+  <template id="tpl-card">
+    <div class="log-row rounded-2xl bg-neutral-900 border border-neutral-800 p-3 flex flex-col gap-2 shadow hover:border-indigo-500" data-id="">
+      <div class="flex items-center gap-2">
+        <input type="checkbox" data-select class="mt-1"/>
+        <div class="min-w-0 flex-1">
+          <div class="font-medium truncate" data-device>Device</div>
+          <div class="text-[11px] text-neutral-400 truncate" data-message>Message</div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[10px] border" data-type>Type</span>
+      </div>
+      <div class="text-xs text-neutral-500">⏰ <span data-time>-</span></div>
+    </div>
+  </template>
+
+  <!-- Log Table Row Template -->
+  <template id="tpl-row">
+    <tr class="log-row hover:bg-neutral-800/40 transition" data-id="">
+      <td class="p-2"><input type="checkbox" data-select/></td>
+      <td class="p-2 text-left" data-time>Time</td>
+      <td class="p-2 text-center" data-device>Device</td>
+      <td class="p-2 text-center" data-type>Type</td>
+      <td class="p-2" data-message>Message</td>
+      <td class="p-2 text-center space-x-1 flex flex-wrap justify-center gap-1">
+        <button class="px-2 py-1 rounded bg-neutral-700 hover:bg-neutral-600 text-xs" data-action="edit">Edit</button>
+        <button class="px-2 py-1 rounded bg-red-600 hover:bg-red-500 text-xs" data-action="delete">Delete</button>
+      </td>
+    </tr>
+  </template>
+
+  <script type="module" src="../js/pages/logs.js"></script>
+  <script>function openPage(page) {window.location.href = page;}</script>
+</body>
+</html>

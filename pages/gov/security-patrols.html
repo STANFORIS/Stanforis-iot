@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stanforis — Patrols</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div class="mx-auto max-w-md min-h-screen relative">
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('dashboard.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1"><p class="text-xs text-neutral-400">Abanyerondo — Patrols</p><p class="font-medium">Patrol logs & attendance</p></div>
+        <button id="btnNewPatrol" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">＋</button>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex gap-2">
+          <input id="q" placeholder="Search patrol / guard" class="flex-1 p-2 rounded-xl bg-neutral-800 border border-neutral-700"/>
+          <button id="btnSearch" class="py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700">Search</button>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Patrol logs</h3>
+        <div id="patrolsList" class="space-y-2 text-sm text-neutral-400">Loading...</div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearPatrol"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+      // Footer year
+      document.getElementById('yearPatrol').textContent = new Date().getFullYear();
+
+      // -------- Firebase Config --------
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const patrolRef = db.ref('patrols');
+
+      let patrolCache = {};
+
+      // Require login
+      auth.onAuthStateChanged(user => {
+        if (!user) {
+          location.href = 'login.html';
+        } else {
+          init();
+        }
+      });
+
+      function init() {
+        document.getElementById('btnNewPatrol').addEventListener('click', newPatrolPrompt);
+        document.getElementById('btnSearch').addEventListener('click', applyFilter);
+
+        patrolRef.on('value', snapshot => {
+          patrolCache = snapshot.val() || {};
+          renderList();
+        });
+      }
+
+      // -------- Render Patrols --------
+      function renderList() {
+        const items = Object.entries(patrolCache).map(([id, p]) => ({ id, ...p }));
+
+        if (!items.length) {
+          document.getElementById('patrolsList').innerHTML = '<div class="text-xs text-neutral-500">No patrols</div>';
+          return;
+        }
+
+        const html = items
+          .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0))
+          .map(p => {
+            const started = new Date(p.startedAt || Date.now()).toLocaleString();
+            return `
+              <div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+                <div class="font-medium">${escapeHtml(p.name || ('Patrol ' + p.id))}</div>
+                <div class="text-xs text-neutral-400">
+                  ${p.guards ? p.guards.join(', ') : 'No guards'} • ${started}
+                </div>
+                <div class="mt-2 flex gap-2">
+                  <button onclick="endPatrol('${p.id}')" class="text-xs px-2 py-1 rounded-md bg-neutral-800">End</button>
+                  <button onclick="markIncident('${p.id}')" class="text-xs px-2 py-1 rounded-md bg-rose-600">Report Incident</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+        document.getElementById('patrolsList').innerHTML = html;
+      }
+
+      // -------- New Patrol --------
+      function newPatrolPrompt() {
+        const name = prompt('Patrol name / route') || ('Patrol ' + Date.now());
+        const guards = (prompt('Guards UIDs (comma separated)') || '')
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        const newRef = patrolRef.push();
+        newRef.set({
+          name,
+          guards,
+          startedAt: firebase.database.ServerValue.TIMESTAMP,
+          status: 'active'
+        });
+      }
+
+      // -------- End Patrol --------
+      function endPatrol(id) {
+        if (!confirm('End patrol?')) return;
+        patrolRef.child(id).update({
+          status: 'ended',
+          endedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+
+      // -------- Report Incident --------
+      function markIncident(id) {
+        const note = prompt('Describe incident');
+        if (!note) return;
+
+        const issueRef = db.ref('issues').push();
+        issueRef.set({
+          title: 'Patrol incident',
+          desc: note,
+          type: 'Security',
+          location: 'patrol:' + id,
+          status: 'pending',
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        alert('Incident reported as issue');
+        // Optionally link issue ID back to patrol if needed
+      }
+
+      // -------- Search / Filter --------
+      function applyFilter() {
+        const q = (document.getElementById('q').value || '').toLowerCase().trim();
+        const items = Object.entries(patrolCache).map(([id, p]) => ({ id, ...p }));
+
+        const filtered = items.filter(p =>
+          (p.name || '').toLowerCase().includes(q) ||
+          (p.guards || []).join(' ').toLowerCase().includes(q)
+        );
+
+        document.getElementById('patrolsList').innerHTML =
+          filtered.map(p => `
+            <div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+              <div class="font-medium">${escapeHtml(p.name)}</div>
+              <div class="text-xs text-neutral-400">${(p.guards || []).join(', ')}</div>
+            </div>
+          `).join('') || '<div class="text-xs text-neutral-500">No results</div>';
+      }
+
+      // -------- Helpers --------
+      function openPage(p) {
+        location.href = p;
+      }
+
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m]));
+      }
+  </script>
+
+</body>
+</html>

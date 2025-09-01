@@ -1,0 +1,23 @@
+<div class="page-root staff-container">
+  <h2>👨‍👩‍👦 Staff Management</h2>
+  <form id="staff-add-form">
+    <input type="text" id="staffName" placeholder="Name" required>
+    <input type="email" id="staffEmail" placeholder="Email" required>
+    <input type="file" id="staffAvatar" accept="image/*">
+    <button type="submit">Add Staff</button>
+  </form>
+
+  <div id="staffList" class="list-grid"></div>
+</div>
+
+<style>
+.staff-container { padding: 10px; font-family: sans-serif; }
+#staff-add-form { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+#staff-add-form input, #staff-add-form button { padding: 8px; border-radius: 6px; border: 1px solid #0ff; }
+#staff-add-form button { background-color: #0ff; color: #000; font-weight: bold; cursor: pointer; }
+.list-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.staff-card { background: #001122cc; color: #0ff; border-radius: 10px; padding: 10px; text-align: center; }
+.staff-card img { width: 60px; height: 60px; border-radius: 50%; margin-bottom: 6px; }
+.staff-card button { margin-top: 6px; padding: 5px 8px; border: none; border-radius: 5px; background-color: #0ff; color: #000; cursor: pointer; }
+.staff-card button:hover { background-color: #0aa; color: #fff; }
+</style>

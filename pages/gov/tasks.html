@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stanforis — Tasks</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div class="mx-auto max-w-md min-h-screen relative">
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('dashboard.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1"><p class="text-xs text-neutral-400">Tasks</p><p class="font-medium">Leader task board</p></div>
+        <button id="btnNewTask" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">＋</button>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <section class="grid grid-cols-3 gap-3">
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
+          <h4 class="font-medium mb-2">To Do</h4>
+          <div id="col_todo" class="space-y-2 text-sm"></div>
+        </div>
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
+          <h4 class="font-medium mb-2">In Progress</h4>
+          <div id="col_inprogress" class="space-y-2 text-sm"></div>
+        </div>
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-900 p-3">
+          <h4 class="font-medium mb-2">Done</h4>
+          <div id="col_done" class="space-y-2 text-sm"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearTasks"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // -------- Footer Year --------
+      document.getElementById('yearTasks').textContent = new Date().getFullYear();
+
+      // -------- Firebase Config --------
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const tasksRef = db.ref('tasks');
+
+      let tasksCache = {};
+
+      // -------- Authentication --------
+      // auth.onAuthStateChanged(user => {
+      //   if (!user) {
+      //     location.href = 'login.html';
+      //   } else {
+      //     init();
+      //   }
+      // });
+
+      // -------- Init --------
+      function init() {
+        document.getElementById('btnNewTask').addEventListener('click', newTaskPrompt);
+        tasksRef.on('value', snapshot => {
+          tasksCache = snapshot.val() || {};
+          renderBoard();
+        });
+      }
+
+      // -------- Render Board --------
+      function renderBoard() {
+        const items = Object.entries(tasksCache).map(([id, v]) => ({ id, ...v }));
+
+        const todo = items.filter(i => (i.status || 'todo') === 'todo')
+                          .sort((a, b) => (a.due || 0) - (b.due || 0));
+        const inprogress = items.filter(i => i.status === 'in_progress');
+        const done = items.filter(i => i.status === 'done');
+
+        document.getElementById('col_todo').innerHTML =
+          todo.map(renderTaskCard).join('') || '<div class="text-xs text-neutral-500">Empty</div>';
+        document.getElementById('col_inprogress').innerHTML =
+          inprogress.map(renderTaskCard).join('') || '<div class="text-xs text-neutral-500">Empty</div>';
+        document.getElementById('col_done').innerHTML =
+          done.map(renderTaskCard).join('') || '<div class="text-xs text-neutral-500">Empty</div>';
+      }
+
+      // -------- Render Single Task --------
+      function renderTaskCard(t) {
+        return `
+          <div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+            <div class="font-medium">${escapeHtml(t.title || '')}</div>
+            <div class="text-xs text-neutral-400">${escapeHtml(t.note || '')}</div>
+            <div class="mt-2 flex gap-2">
+              ${t.status !== 'in_progress' ? `<button onclick="updateTaskStatus('${t.id}','in_progress')" class="text-xs px-2 py-1 rounded-md bg-neutral-800">Start</button>` : ''}
+              ${t.status !== 'done' ? `<button onclick="updateTaskStatus('${t.id}','done')" class="text-xs px-2 py-1 rounded-md bg-emerald-600">Done</button>` : ''}
+              <button onclick="editTask('${t.id}')" class="text-xs px-2 py-1 rounded-md bg-neutral-800">Edit</button>
+              <button onclick="deleteTask('${t.id}')" class="text-xs px-2 py-1 rounded-md bg-rose-600">Del</button>
+            </div>
+          </div>`;
+      }
+
+      // -------- New Task --------
+      function newTaskPrompt() {
+        const title = prompt('Task title');
+        if (!title) return;
+
+        const note = prompt('Note') || '';
+        const assignee = prompt('Assignee UID (optional)') || '';
+
+        createTask({ title, note, assignee });
+      }
+
+      async function createTask(payload) {
+        const user = auth.currentUser;
+        if (!user) return alert('Login required');
+
+        const ref = tasksRef.push();
+        await ref.set({
+          title: payload.title,
+          note: payload.note || '',
+          assignee: payload.assignee || '',
+          status: 'todo',
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        await db.ref('counters/tasks').transaction(n => (n || 0) + 1);
+      }
+
+      // -------- Update Status --------
+      async function updateTaskStatus(id, to) {
+        await tasksRef.child(id).update({
+          status: to,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        // Decrease tasks counter when marked done
+        if (to === 'done') {
+          await db.ref('counters/tasks').transaction(n => Math.max(0, (n || 1) - 1));
+        }
+      }
+
+      // -------- Edit Task --------
+      function editTask(id) {
+        const t = tasksCache[id];
+        const title = prompt('Title', t.title) || t.title;
+        const note = prompt('Note', t.note) || t.note;
+
+        tasksRef.child(id).update({
+          title,
+          note,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+
+      // -------- Delete Task --------
+      function deleteTask(id) {
+        if (!confirm('Delete task?')) return;
+        tasksRef.child(id).remove();
+      }
+
+      // -------- Utils --------
+      function openPage(p) {
+        location.href = p;
+      }
+
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, m => (
+          { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]
+        ));
+      }
+    </script>
+
+</body>
+</html>

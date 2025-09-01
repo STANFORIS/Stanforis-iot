@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stanforis — Issue</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div class="mx-auto max-w-md min-h-screen relative">
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('issues.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1"><p class="text-xs text-neutral-400">Issue</p><p id="issueTitle" class="font-medium">Loading…</p></div>
+        <button id="btnResolve" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Resolve</button>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div id="issueMeta" class="text-sm text-neutral-400">…</div>
+        <div id="issueDesc" class="mt-3 text-sm text-neutral-300">…</div>
+      </section>
+
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Comments</h3>
+        <div id="commentsList" class="space-y-2 text-sm text-neutral-400">Loading comments…</div>
+        <textarea id="commentText" placeholder="Add a comment" class="p-2 rounded-xl bg-neutral-800 border border-neutral-700 w-full mt-2"></textarea>
+        <div class="flex gap-2 mt-2">
+          <button id="btnAddComment" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Comment</button>
+          <button id="btnLinkResident" class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">Link resident</button>
+        </div>
+        <div id="issueMsg" class="text-xs text-amber-200 mt-2"></div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearIssue"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+      // Display current year
+      document.getElementById('yearIssue').textContent = new Date().getFullYear();
+
+      // Firebase configuration & initialization
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+
+      // Get issue ID from URL
+      const params = new URLSearchParams(window.location.search);
+      const issueId = params.get('id');
+      if (!issueId) {
+        alert('Missing issue id');
+        location.href = 'issues.html';
+      }
+
+      const issueRef = db.ref('issues/' + issueId);
+      const commentsRef = db.ref('issues/' + issueId + '/comments');
+
+      // Require login
+      // auth.onAuthStateChanged(user => {
+      //   if (!user) location.href = 'login.html';
+      //   else loadIssue();
+      // });
+
+      function loadIssue() {
+        // Load issue details
+        issueRef.on('value', snap => {
+          const it = snap.val();
+          if (!it) {
+            alert('Issue not found');
+            location.href = 'issues.html';
+            return;
+          }
+          document.getElementById('issueTitle').textContent = it.title || 'Issue';
+          document.getElementById('issueMeta').textContent = `${it.type || ''} • ${it.location || ''} • Status: ${it.status || 'pending'}`;
+          document.getElementById('issueDesc').textContent = it.desc || '';
+          document.getElementById('btnResolve').onclick = () => changeStatus('resolved');
+        });
+
+        // Load comments
+        commentsRef.on('value', snap => {
+          const data = snap.val() || {};
+          renderComments(Object.entries(data).map(([k, v]) => ({ id: k, ...v })));
+        });
+
+        // Button listeners
+        document.getElementById('btnAddComment').addEventListener('click', addComment);
+        document.getElementById('btnLinkResident').addEventListener('click', linkResidentPrompt);
+      }
+
+      function renderComments(list) {
+        const html = list
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .map(c => {
+            const when = new Date(c.createdAt || Date.now()).toLocaleString();
+            return `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+                      <div class="font-medium text-sm">${escapeHtml(c.authorName || '')}</div>
+                      <div class="text-xs text-neutral-400">${escapeHtml(c.text || '')}</div>
+                      <div class="text-[10px] text-neutral-500 mt-1">${when}</div>
+                    </div>`;
+          })
+          .join('');
+        document.getElementById('commentsList').innerHTML = html || '<div class="text-xs text-neutral-500">No comments</div>';
+      }
+
+      async function addComment() {
+        const t = document.getElementById('commentText').value.trim();
+        if (!t) return;
+
+        const user = auth.currentUser;
+        const profileSnap = await db.ref('users/' + user.uid + '/name').once('value');
+        const authorName = profileSnap.val() || user.email || 'user';
+
+        const cRef = commentsRef.push();
+        await cRef.set({
+          text: t,
+          author: user.uid,
+          authorName,
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        document.getElementById('commentText').value = '';
+      }
+
+      async function changeStatus(to) {
+        if (!confirm('Change status to ' + to + '?')) return;
+
+        await issueRef.update({
+          status: to,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+
+        if (to === 'resolved') {
+          await db.ref('counters/issues').transaction(n => Math.max(0, (n || 1) - 1));
+        }
+
+        document.getElementById('issueMsg').textContent = 'Status updated';
+        setTimeout(() => document.getElementById('issueMsg').textContent = '', 3000);
+      }
+
+      async function linkResidentPrompt() {
+        const id = prompt('Resident id to link (paste id)');
+        if (!id) return;
+        await issueRef.update({ linkedResident: id });
+        alert('Linked');
+      }
+
+      function openPage(p) { location.href = p; }
+
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m]));
+      }
+  </script>
+
+</body>
+</html>

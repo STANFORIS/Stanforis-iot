@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stanforis — Admin Users</title>
+    <link href="../../css/output.css" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark light
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100">
+    <div class="mx-auto max-w-md min-h-screen relative">
+        <header class="sticky top-0 bg-neutral-900/80 border-b">
+            <div class="flex items-center px-4 h-16"><button onclick="openPage('dashboard.html')"
+                    class="p-2 rounded-xl bg-neutral-800">←</button>
+                <div class="flex-1">
+                    <p class="text-xs text-neutral-400">Admin — Users</p>
+                    <p class="font-medium">Manage users & roles</p>
+                </div><button id="btnInvite" class="p-2 rounded-xl bg-emerald-600">Invite</button>
+            </div>
+        </header>
+        <main class="p-4 pb-24 space-y-4">
+            <section class="rounded-2xl border bg-neutral-900 p-4">
+                <div class="flex gap-2"><input id="q" placeholder="Search email / name"
+                        class="flex-1 p-2 rounded-xl bg-neutral-800" /><button id="btnSearch"
+                        class="py-2 px-3 rounded-xl bg-neutral-800">Search</button></div>
+            </section>
+            <section class="rounded-2xl border bg-neutral-900 p-4">
+                <h3 class="font-medium">Users</h3>
+                <div id="users" class="text-sm text-neutral-400">Loading...</div>
+            </section>
+        </main>
+        <footer class="fixed bottom-0 inset-x-0 bg-neutral-900 border-t">
+            <div class="max-w-md mx-auto">
+                <div class="grid grid-cols-5 text-[9px]"><a href="dashboard.html">Mudugudu</a><a
+                        href="devices.html">Devices</a><a href="automation.html">Scenes</a><a
+                        href="notifications.html">Alerts</a><a href="settings.html">⚙️</a></div>
+                <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="y"></span> Stanforis
+                    Rwanda</div>
+            </div>
+        </footer>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+
+    <script>
+        /* ========== Set Footer Year ========== */
+        document.getElementById('y').textContent = new Date().getFullYear();
+
+        /* ========== Firebase Configuration ========== */
+        const firebaseConfig = {
+            apiKey: "FIREBASE_API_KEY",
+            authDomain: "PROJECT.firebaseapp.com",
+            databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+            projectId: "PROJECT",
+            storageBucket: "PROJECT.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Firebase services
+        const auth = firebase.auth();
+        const db   = firebase.database();
+
+        // References
+        const usersRef = db.ref('users');
+
+        /* ========== Authentication Check ========== */
+        // auth.onAuthStateChanged(user => {
+        //     if (!user) {
+        //         // Redirect if not signed in
+        //         location.href = 'login.html';
+        //     } else {
+        //         init();
+        //     }
+        // });
+
+        /* ========== Initialize Page ========== */
+        function init() {
+            // Listen for user changes in realtime
+            usersRef.on('value', snapshot => {
+                render(Object.entries(snapshot.val() || {}));
+            });
+
+            // Buttons
+            document.getElementById('btnInvite').addEventListener('click', invite);
+            document.getElementById('btnSearch').addEventListener('click', search);
+        }
+
+        /* ========== Render Users List ========== */
+        function render(list) {
+            const html = list.map(([uid, user]) => `
+                <div class="p-2 rounded-xl bg-neutral-900 border flex justify-between items-center">
+                    <div>
+                        <div class="font-medium">${escape(user.name || user.email || uid)}</div>
+                        <div class="text-xs text-neutral-400">${user.role || 'user'}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="edit('${uid}')" class="px-2 py-1 text-xs bg-neutral-800 rounded">Edit</button>
+                        <button onclick="del('${uid}')" class="px-2 py-1 text-xs bg-rose-600 rounded">Del</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('users').innerHTML =
+                html || '<div class="text-xs text-neutral-500">No users</div>';
+        }
+
+        /* ========== Invite User ========== */
+        function invite() {
+            const code  = prompt('Invite code');
+            if (!code) return;
+
+            const role  = prompt('Role (admin/chief/user)') || 'user';
+            const scope = prompt('Scope (optional)') || '';
+
+            db.ref('invites/' + code).set({
+                role,
+                scope,
+                issuedAt: firebase.database.ServerValue.TIMESTAMP,
+                used: false
+            });
+
+            alert('Invite created');
+        }
+
+        /* ========== Edit User Role ========== */
+        function edit(uid) {
+            const role = prompt(
+                'Role',
+                (usersCache[uid] || {}).role || 'user'
+            );
+
+            db.ref('users/' + uid + '/role').set(role);
+        }
+
+        /* ========== Delete User Record ========== */
+        function del(uid) {
+            if (!confirm('Delete user record?')) return;
+            db.ref('users/' + uid).remove();
+        }
+
+        /* ========== Cache Users for Search ========== */
+        let usersCache = {};
+        usersRef.on('value', snapshot => {
+            usersCache = snapshot.val() || {};
+        });
+
+        /* ========== Search Users ========== */
+        function search() {
+            const q = (document.getElementById('q').value || '').toLowerCase().trim();
+
+            const results = Object.entries(usersCache).filter(([id, user]) =>
+                (user.email || '').toLowerCase().includes(q) ||
+                (user.name  || '').toLowerCase().includes(q)
+            );
+
+            document.getElementById('users').innerHTML =
+                results.map(([id, user]) => `
+                    <div class="p-2 rounded-xl bg-neutral-900 border">
+                        <div class="font-medium">${escape(user.name || user.email)}</div>
+                        <div class="text-xs">${escape(user.role || 'user')}</div>
+                    </div>
+                `).join('') || '<div class="text-xs text-neutral-500">No results</div>';
+        }
+
+        /* ========== Utilities ========== */
+        // Navigate to another page
+        function openPage(p) {
+            location.href = p;
+        }
+
+        // Escape HTML to prevent injection
+        function escape(s) {
+            return (s || '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m]));
+        }
+    </script>
+
+</body>
+</html>

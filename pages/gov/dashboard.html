@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stanforis — Dashboard</title>
+  <link href="../../css/output.css" rel="stylesheet">
+    <style>
+    :root { color-scheme: dark light }
+    /* Scrollbar */
+      ::-webkit-scrollbar{width:8px;height:8px}
+      ::-webkit-scrollbar-thumb{background:#2f2f2f;border-radius:8px}
+    /* Side rail positioning */
+    .side-rail{position:absolute;top:64px;bottom:84px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+    /* Base buttons */
+    .rightrail-btn,.leftrail-btn {width: 18px;height: 18px;border-radius: 4px;background: #3a3a3a;display: flex;align-items: center;justify-content: center;position: relative;cursor: pointer;transition: background 0.2s ease;}
+    /* Glow animation when active (first tap) */
+    .rightrail-btn.active,.leftrail-btn.active { background: #000;box-shadow: 0 0 6px #22d3ee, 0 0 12px #22d3ee inset;animation: pulse 1s infinite alternate;}
+    @keyframes pulse {from { box-shadow: 0 0 6px #22d3ee, 0 0 12px #22d3ee inset; } to   { box-shadow: 0 0 12px #22d3ee, 0 0 20px #22d3ee inset; }}
+    /* Tooltip */
+    .rightrail-btn .tooltip,.leftrail-btn .tooltip {position: absolute; bottom: 120%;left: 50%; transform: translateX(-50%);background: #111;color: white;font-size: 9px;padding: 2px 6px;border-radius: 6px;white-space: nowrap;opacity: 0;pointer-events: none;transition: opacity 0.2s ease-in-out;box-shadow: 0 0 6px #22d3ee; z-index: 50;}
+    /* Tooltip arrow */
+    .rightrail-btn .tooltip::after,.leftrail-btn .tooltip::after {content: ""; position: absolute; top: 100%;left: 50%; transform: translateX(-50%); border-width: 4px; border-style: solid;border-color: #111 transparent transparent transparent;}
+    /* Show tooltip when button is active */
+    .rightrail-btn.active .tooltip,.leftrail-btn.active .tooltip { opacity: 1;}
+    /* Misc elements */
+    #analogClock { width: 260px; height: 260px }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom) }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="../../img/avatar-placeholder.png"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Governor</p>
+          <p id="username" class="font-medium truncate">Progress........</p>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btnNotifications" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" title="Notifications">🔔</button>
+          <button id="btnSettings" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" title="Settings" onclick="openPage('settings.html')">⚙️</button>
+          <button id="btnSignOut" class="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700" title="Sign out">⎋</button>
+        </div>
+    </header>
+
+        <!-- Scrollable Quick Action Buttons -->
+      <section aria-labelledby="quick-actions-title">
+        <div class="flex space-x-3 overflow-x-auto pb-2">
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('devices.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 1</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('alerts.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 2</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('about.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 3</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('automation.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 4</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('contacts.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 5</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('emergency.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 6</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('load-familiars.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 7</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('logs.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 8</span></div><div class="text-lg font-semibold">0</div></button>
+          <button class="flex-shrink-0 w-28 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-left" onclick="openPage('notifications.html')"><div class="flex items-center gap-2 text-xs text-neutral-400"><span></span><span>Imiyoborere 9</span></div><div class="text-lg font-semibold">0</div></button>
+        </section>
+  <!-- ////////////////////////////////// RAILS START //////////////////////////////// -->
+
+    <div class="side-rail left-0 pl-2 hidden sm:flex">
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="resident.html"><span class="tooltip">Umuturage</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="residents.html"><span class="tooltip">Abaturage</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="security-alerts.html"><span class="tooltip">Umutekano</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="security-incidents.html"><span class="tooltip">Umutekano Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="security-patrols.html"><span class="tooltip">Abanyerondo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="leftrail-btn" data-action="reports.html"><span class="tooltip">Raporo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+
+    </div>
+
+    <div class="side-rail right-0 pr-2 hidden sm:flex">
+      <button class="rightrail-btn" data-action="tasks"><span class="tooltip">Ibikorwa</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="leaders.html"><span class="tooltip">Ubuyobozi</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="maps.html"><span class="tooltip">Ikarita Ndango</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="meetings.html"><span class="tooltip">Inama Rusange</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="notifications.html"><span class="tooltip">Ubutumwa</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="committees.html"><span class="tooltip">Committees</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="dwelling.html"><span class="tooltip">Imiturire</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="exports.html"><span class="tooltip">Inyandiko</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issues.html"><span class="tooltip">Ibibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+      <button class="rightrail-btn" data-action="issue.html"><span class="tooltip">Ikibazo</span><div class="text-lg font-semibold"><span id="kpi-example">0</span></div></button>
+
+    </div>
+   <!-- ////////////////////////////////// RAILS END //////////////////////////////// -->
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <!-- Quick actions -->
+      <section aria-labelledby="quick-actions-title">
+        <div class="flex space-x-3 overflow-x-auto pb-2">
+          <!-- Quick action buttons here -->
+        </div>
+      </section>
+
+      <!-- Civic Dashboard Section -->
+      <section class="bg-neutral-800 p-4 rounded-2xl">
+        <h3 class="text-xl font-medium text-white">Your Civic Dashboard</h3>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="bg-neutral-700 p-3 rounded-xl text-center">
+            <h4 class="text-sm text-neutral-400">Active Issues</h4>
+            <div class="text-xl font-semibold" id="kpiActiveIssues">0</div>
+          </div>
+          <div class="bg-neutral-700 p-3 rounded-xl text-center">
+            <h4 class="text-sm text-neutral-400">Security Alerts</h4>
+            <div class="text-xl font-semibold" id="kpiSecurityAlerts">0</div>
+          </div>
+          <div class="bg-neutral-700 p-3 rounded-xl text-center">
+            <h4 class="text-sm text-neutral-400">Nearby Patrol</h4>
+            <div class="text-xl font-semibold" id="kpiNearbyPatrols">0</div>
+          </div>
+          <div class="bg-neutral-700 p-3 rounded-xl text-center">
+            <h4 class="text-sm text-neutral-400">New Government Notifications</h4>
+            <div class="text-xl font-semibold" id="kpiNotifications">0</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Issue Reporting Section -->
+      <section class="bg-neutral-700 p-4 rounded-xl">
+        <h4 class="text-lg text-white">Report an Issue</h4>
+        <input id="issueTitle" class="w-full p-2 mt-2 rounded-xl bg-neutral-800 text-white" placeholder="Enter issue title" />
+        <textarea id="issueDescription" class="w-full p-2 mt-2 rounded-xl bg-neutral-800 text-white" placeholder="Describe the issue"></textarea>
+        <input type="file" id="issueImage" class="mt-4" />
+        <button class="mt-4 bg-emerald-600 w-full p-3 rounded-xl text-white" onclick="submitIssue()">Submit</button>
+      </section>
+
+      <!-- Dashboard KPIs -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-4">Rwanda Civic Management Dashboard</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-neutral-800 rounded-2xl p-4 text-center">
+            <h4 class="text-neutral-400 text-sm">Total Residents</h4>
+            <div class="text-2xl font-semibold" id="kpiPopulation">0</div>
+          </div>
+          <div class="bg-neutral-800 rounded-2xl p-4 text-center">
+            <h4 class="text-neutral-400 text-sm">Active Issues</h4>
+            <div class="text-2xl font-semibold" id="kpiIssues">0</div>
+          </div>
+          <div class="bg-neutral-800 rounded-2xl p-4 text-center">
+            <h4 class="text-neutral-400 text-sm">Security Alerts</h4>
+            <div class="text-2xl font-semibold" id="kpiAlerts">0</div>
+          </div>
+          <div class="bg-neutral-800 rounded-2xl p-4 text-center">
+            <h4 class="text-neutral-400 text-sm">Active Patrols</h4>
+            <div class="text-2xl font-semibold" id="kpiPatrols">0</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white">Isibo</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white">Umudugudu</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white">Akagari</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white">Umurenge</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl bg-black text-white">⚙️Minisiteri</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearDash"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    document.getElementById('yearDash').textContent = new Date().getFullYear();
+
+    const firebaseConfig = {
+      apiKey: "FIREBASE_API_KEY",
+      authDomain: "PROJECT.firebaseapp.com",
+      databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+      projectId: "PROJECT",
+      storageBucket: "PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // Require sign-in for dashboard; redirect to login if not authenticated.
+    auth.onAuthStateChanged(async user => {
+      const roleSnap = await db.ref('users/'+user.uid+'/role').once('value');
+      const role = roleSnap.val() || 'user';
+      document.getElementById('userRole').textContent = role;
+      // start listening KPIs
+      bindKpi('population','kpiDevices'); // example: adapt to your DB layout
+      bindKpi('issues','kpiIssues');
+      bindKpi('alerts','kpiAlerts');
+      bindKpi('patrols','kpiPatrols');
+      bindKpi('tasks','kpiTasks');
+      loadLatestIssues();
+    });
+
+    document.getElementById('btnSignOut').addEventListener('click', ()=> auth.signOut().then(()=> window.location.href='../../pages/dashboard.html'));
+
+    function bindKpi(dbKey, domId){
+      const ref = db.ref('counters/'+dbKey);
+      ref.on('value', snap => {
+        const v = snap.val() || 0;
+        document.getElementById(domId).textContent = v;
+      });
+    }
+
+    // Create issue and handle form submission
+    async function createIssue(){
+      const title = document.getElementById('issueTitle').value.trim();
+      const desc = document.getElementById('issueDesc').value.trim();
+      const msg = document.getElementById('issueMsg'); msg.textContent='';
+      if(!title) { msg.textContent = 'Add a short title.'; return; }
+      const user = auth.currentUser;
+      if(!user){ msg.textContent = 'Sign in required.'; return; }
+      try{
+        const newRef = db.ref('issues').push();
+        await newRef.set({
+          title,
+          desc,
+          status: 'pending',
+          createdBy: user.uid,
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        // increment counter atomic
+        await db.ref('counters/issues').transaction(current => (current || 0) + 1);
+        msg.textContent = 'Reported.';
+        document.getElementById('issueTitle').value='';
+        document.getElementById('issueDesc').value='';
+        loadLatestIssues();
+      }catch(e){ msg.textContent = e.message; }
+    }
+
+    // Load recent issues from Firebase
+    async function loadLatestIssues(){
+      const container = document.getElementById('recentIssues');
+      container.textContent = 'Loading...';
+      const snap = await db.ref('issues').orderByChild('createdAt').limitToLast(5).once('value');
+      const data = snap.val() || {};
+      const rows = Object.keys(data).reverse().map(k => {
+        const it = data[k];
+        const d = new Date(it.createdAt || Date.now()).toLocaleString();
+        return `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 mb-2">
+          <div class="text-sm font-medium">${escapeHtml(it.title)}</div>
+          <div class="text-xs text-neutral-400">${escapeHtml(it.desc)}</div>
+          <div class="text-[10px] text-neutral-500 mt-1">${d}</div>
+        </div>`;
+      });
+      container.innerHTML = rows.join('') || '<div class="text-xs text-neutral-500">No recent issues</div>';
+    }
+
+    // small helpers
+    function openPage(p){ window.location.href = p; }
+    function toast(t){ alert(t); }
+    function showResult(){ toast('Result percentage (demo)'); }
+    function startDetection(){ toast('Detection started (demo)'); }
+    function startRecognition(){ toast('Recognition started (demo)'); }
+    function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    document.querySelectorAll('.leftrail-btn, .rightrail-btn').forEach(btn => {
+      let tapTimeout = null;
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('active')) {
+          // Second tap within 2s → launch popup/modal
+          clearTimeout(tapTimeout);
+          btn.classList.remove('active');
+          alert("Launching: " + btn.dataset.action);
+          // Replace alert with real popup open function
+        } else {
+          // First tap → activate & start timer
+          btn.classList.add('active');
+          tapTimeout = setTimeout(() => {
+            btn.classList.remove('active');
+          }, 2000); // back to default if no second tap
+        }
+      });
+    });
+  </script>
+   <script type="module" src="../../js/pages/social_dashbaord.js"></script>
+</body>
+</html>

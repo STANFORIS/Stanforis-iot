@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Automation</title>
+<link href="../css/output.css" rel="stylesheet">
+  <style>
+    body { transition: background 0.3s, color 0.3s; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #2d2d2d; text-align: center; }
+    th { background: #1e1e1e; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+        <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="https://ui-avatars.com/api/?name=User&background=111111&color=ffffff"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Admin</p>
+          <p id="username" class="font-medium truncate">please wait....</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button data-action="open-add" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-sm">➕ Add Rule</button>
+        </div>
+        </div>
+    </header>
+
+
+
+    <!-- Description -->
+    <section class="px-4 py-3 text-sm text-neutral-400">
+      Create triggers, conditions, and actions for your IoT devices. Automations run on schedule or device events.
+    </section>
+
+    <!-- Search + Filters -->
+    <div class="px-4 pb-3 flex flex-wrap gap-2">
+      <input id="search" data-filter="query" type="text" placeholder="Search by name, type, or trigger..." class="flex-1 min-w-[200px] px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm" />
+      <select data-filter="status" class="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+      <select data-filter="type" class="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm">
+        <option value="">All Types</option>
+        <option value="time">Time</option>
+        <option value="device">Device</option>
+        <option value="condition">Condition</option>
+      </select>
+      <select data-sort class="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-sm">
+        <option value="name">Sort by Name</option>
+        <option value="lastRun">Sort by Last Run</option>
+      </select>
+      <button data-action="clear-filters" class="px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-sm">Clear</button>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="px-4 pb-3 flex flex-wrap gap-2 text-sm">
+      <button data-action="bulk-activate" class="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600">Activate</button>
+      <button data-action="bulk-deactivate" class="px-3 py-1 rounded-lg bg-yellow-700 hover:bg-yellow-600">Deactivate</button>
+      <button data-action="bulk-delete" class="px-3 py-1 rounded-lg bg-red-700 hover:bg-red-600">Delete</button>
+    </div>
+
+    <!-- Results + View Switch -->
+    <div class="px-4 pb-3 flex items-center justify-between text-sm text-neutral-400">
+      <span><span data-results-current>0</span>/<span data-results-total>0</span> rules</span>
+      <div class="space-x-1">
+        <button data-view="grid" class="px-2 py-1 rounded bg-neutral-800">Grid</button>
+        <button data-view="table" class="px-2 py-1 rounded bg-neutral-800">Table</button>
+      </div>
+    </div>
+
+    <!-- Grid View -->
+    <section id="gridView" data-view-panel="grid" class="px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <!-- Automation cards injected here -->
+    </section>
+
+    <!-- Table View -->
+    <main id="tableView" data-view-panel="table" class="px-2 pb-24 overflow-x-auto hidden">
+      <table class="text-sm" id="automationTable">
+        <thead>
+          <tr>
+            <th><input type="checkbox" data-select="all"></th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Trigger</th>
+            <th>Condition</th>
+            <th>Action</th>
+            <th>Status</th>
+            <th>Last Run</th>
+            <th>Controls</th>
+          </tr>
+        </thead>
+        <tbody id="automationBody">
+          <tr><td colspan="9" class="py-4 text-neutral-500">No automations found</td></tr>
+        </tbody>
+      </table>
+    </main>
+
+    <!-- Pagination -->
+    <div class="px-4 py-3 flex justify-between items-center text-sm text-neutral-400">
+      <button data-page="prev" class="px-2 py-1 bg-neutral-800 rounded">Prev</button>
+      <span>Page <span data-page-current>1</span>/<span data-page-total>1</span></span>
+      <button data-page="next" class="px-2 py-1 bg-neutral-800 rounded">Next</button>
+    </div>
+
+    <!-- //////////////////////////////////////////////////////////////// -->
+     <!-- Inspector Tabs -->
+    <div class="flex gap-2 border-b border-neutral-700">
+    <button data-tab="settings" class="px-3 py-1 bg-neutral-800 text-white">Settings</button>
+    <button data-tab="triggers" class="px-3 py-1">Triggers</button>
+    <button data-tab="actions" class="px-3 py-1">Actions</button>
+    <button data-tab="logs" class="px-3 py-1">Logs</button>
+    </div>
+
+    <!-- Inspector Panels -->
+    <div class="mt-2">
+    <div data-panel="settings">Settings content here...</div>
+    <div data-panel="triggers" class="hidden">Triggers content here...</div>
+    <div data-panel="actions" class="hidden">Actions content here...</div>
+    <div data-panel="logs" class="hidden">Logs content here...</div>
+    </div>
+
+     <!-- ////////////////////////////////////////////////// -->
+
+    <!-- Inspector Drawer -->
+    <aside id="inspector" class="fixed top-0 right-0 w-96 h-full bg-neutral-900 border-l border-neutral-800 transform translate-x-full transition-transform duration-300 z-40">
+      <div class="flex justify-between items-center px-4 h-14 border-b border-neutral-800">
+        <h2 class="text-base font-semibold" data-panel-title>Automation</h2>
+        <button data-action="close-panel">✖</button>
+      </div>
+      <div class="px-4 py-3 space-x-2 border-b border-neutral-800 text-sm">
+        <button data-tab="settings" class="px-2 py-1 rounded bg-neutral-800">⚙️ Settings</button>
+        <button data-tab="triggers" class="px-2 py-1 rounded bg-neutral-800">🎯 Triggers</button>
+        <button data-tab="actions" class="px-2 py-1 rounded bg-neutral-800">⚡ Actions</button>
+        <button data-tab="logs" class="px-2 py-1 rounded bg-neutral-800">📜 Logs</button>
+      </div>
+      <div class="p-4 text-sm overflow-y-auto h-[calc(100%-7rem)]">
+        <div data-tab-panel="settings">TODO: automation settings form</div>
+        <div data-tab-panel="triggers" class="hidden">TODO: trigger configuration UI</div>
+        <div data-tab-panel="actions" class="hidden">TODO: action configuration UI</div>
+        <div data-tab-panel="logs" class="hidden">TODO: execution logs list</div>
+      </div>
+    </aside>
+
+    <!-- Add Modal -->
+    <div id="addModal" class="hidden fixed inset-0 flex items-center justify-center z-50">
+      <div id="modalBackdrop" class="absolute inset-0 bg-black/50"></div>
+      <div class="bg-neutral-900 rounded-xl shadow-xl w-full max-w-md p-4 relative z-10">
+        <h3 class="text-lg font-semibold mb-3">Add Automation Rule</h3>
+        <form class="space-y-3">
+          <input data-add="name" type="text" placeholder="Rule Name" class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700" />
+          <select data-add="type" class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700">
+            <option value="time">Time</option>
+            <option value="device">Device</option>
+            <option value="condition">Condition</option>
+          </select>
+          <textarea data-add="trigger" placeholder="Trigger definition..." class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700"></textarea>
+          <textarea data-add="action" placeholder="Action definition..." class="w-full px-3 py-2 rounded bg-neutral-800 border border-neutral-700"></textarea>
+        </form>
+        <div class="flex justify-end gap-2 mt-4">
+          <button data-modal="cancel" class="px-3 py-1 bg-neutral-700 rounded">Cancel</button>
+          <button data-modal="submit-add" class="px-3 py-1 bg-indigo-600 rounded">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Panel -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-3 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-2">
+          © <span id="year"></span> Stanforis Rwanda— All rights reserved
+        </div>
+      </div>
+    </footer>
+
+    <!-- Templates -->
+    <template id="tpl-card">
+      <div class="device-card rounded-xl border border-neutral-800 bg-neutral-900 p-4 flex flex-col gap-2">
+        <div class="flex justify-between items-center">
+          <span data-icon class="text-2xl">⚙️</span>
+          <span data-status class="px-2 py-0.5 rounded-full text-[10px] border">Status</span>
+        </div>
+        <div>
+          <div data-name class="font-semibold">Rule Name</div>
+          <div data-type class="text-xs text-neutral-400">Type</div>
+        </div>
+        <div class="text-xs text-neutral-400" data-trigger>Trigger</div>
+        <div class="text-xs text-neutral-400" data-action>Action</div>
+        <div class="flex justify-end gap-1 text-xs">
+          <button data-action="toggle" class="px-2 py-1 bg-neutral-800 rounded">Toggle</button>
+          <button data-action="open-panel" class="px-2 py-1 bg-neutral-700 rounded">Details</button>
+        </div>
+      </div>
+    </template>
+
+    <template id="tpl-row">
+      <tr class="automation-row">
+        <td><input type="checkbox" data-select></td>
+        <td data-name>Rule</td>
+        <td data-type>Type</td>
+        <td data-trigger>Trigger</td>
+        <td data-condition>Condition</td>
+        <td data-action>Action</td>
+        <td data-status>Status</td>
+        <td data-lastRun>Last Run</td>
+        <td class="space-x-1">
+          <button data-action="toggle" class="px-2 py-1 bg-neutral-800 rounded text-xs">Toggle</button>
+          <button data-action="edit" class="px-2 py-1 bg-indigo-600 rounded text-xs">Edit</button>
+          <button data-action="remove" class="px-2 py-1 bg-red-600 rounded text-xs">Delete</button>
+        </td>
+      </tr>
+    </template>
+
+  </div>
+  <script type="module" src="../js/pages/automation.js"></script>
+  <script>function openPage(page) {window.location.href = page;}</script>
+</body>
+</html>

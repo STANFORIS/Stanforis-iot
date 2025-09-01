@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stanforis — Alerts</title>
+    <link href="../../css/output.css" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark light
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100">
+    <div class="mx-auto max-w-md min-h-screen relative">
+        <header class="sticky top-0 bg-neutral-900/80 border-b">
+            <div class="flex items-center px-4 h-16"><button onclick="openPage('dashboard.html')"
+                    class="p-2 rounded-xl bg-neutral-800">←</button>
+                <div class="flex-1">
+                    <p class="text-xs text-neutral-400">Alerts</p>
+                    <p class="font-medium">Geofenced & broadcast</p>
+                </div>
+            </div>
+        </header>
+        <main class="p-4 pb-24 space-y-4">
+            <section class="rounded-2xl border bg-neutral-900 p-4">
+                <h3 class="font-medium">Active alerts</h3>
+                <div id="list" class="text-sm text-neutral-400">Loading...</div>
+            </section>
+        </main>
+        <footer class="fixed bottom-0 inset-x-0 bg-neutral-900 border-t">
+            <div class="max-w-md mx-auto">
+                <div class="grid grid-cols-5 text-[9px]"><a href="dashboard.html">Mudugudu</a><a
+                        href="devices.html">Devices</a><a href="automation.html">Scenes</a><a
+                        href="notifications.html">Alerts</a><a href="settings.html">⚙️</a></div>
+                <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="y"></span> Stanforis
+                    Rwanda</div>
+            </div>
+        </footer>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        // Set footer year
+        document.getElementById('y').textContent = new Date().getFullYear();
+
+        // -------- Firebase config ----------
+        const firebaseConfig = {
+          apiKey: "FIREBASE_API_KEY",
+          authDomain: "PROJECT.firebaseapp.com",
+          databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+          projectId: "PROJECT",
+          storageBucket: "PROJECT.appspot.com",
+          messagingSenderId: "SENDER_ID",
+          appId: "APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const alertsRef = db.ref('alerts');
+
+        // // Require login
+        // auth.onAuthStateChanged(user => {
+        //   if (!user) window.location.href = 'login.html';
+        //   else init();
+        // });
+
+        function init() {
+          alertsRef.on('value', snap => render(snap.val() || {}));
+        }
+
+        function render(data) {
+          const rows = Object.entries(data)
+            .reverse()
+            .map(([k, v]) => `
+              <div class="p-2 rounded-xl bg-neutral-900 border">
+                <div class="font-medium">${escapeHtml(v.title || '')}</div>
+                <div class="text-xs text-neutral-400">
+                  ${escapeHtml(v.region || '')} • ${v.active ? 'Active' : 'Ended'}
+                </div>
+              </div>
+            `).join('');
+
+          document.getElementById('list').innerHTML = rows || '<div class="text-xs text-neutral-500">No alerts</div>';
+        }
+
+        function openPage(p) {
+          window.location.href = p;
+        }
+
+        function escapeHtml(s) {
+          return (s || '').replace(/[&<>"']/g, m => ({
+            '&':'&amp;',
+            '<':'&lt;',
+            '>':'&gt;',
+            '"':'&quot;',
+            "'":'&#39;'
+          }[m]));
+        }
+    </script>
+
+</body>
+
+</html>

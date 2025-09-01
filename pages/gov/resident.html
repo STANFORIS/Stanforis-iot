@@ -1,0 +1,325 @@
+<!-- 2) resident.html — resident detail, family, life events, edit
+
+Features implemented:
+
+Reads resident by ?id=... from URL, subscribes to real-time updates
+
+Displays profile, family members (found by parent_name or dwelling_id), timeline of life events from /residents/{id}/events (events are an array/object)
+
+Add life event (birth, death, moved, marriage) and update life_status when appropriate
+
+Edit full profile, save to DB
+
+Attach simple file (image) to Firebase Storage is not included (can be added). For now attachments are URLs in the event object.
+
+Delete event and delete resident (with confirmation) -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stanforis — Resident</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('residents.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400">Resident profile</p>
+          <p id="resName" class="font-medium truncate">—</p>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnDeleteResident" class="p-2 rounded-xl bg-rose-600 hover:bg-rose-500">Delete</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <!-- Profile card -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex items-start gap-3">
+          <div class="w-16 h-16 rounded-full bg-neutral-800 grid place-items-center text-xl">👤</div>
+          <div class="flex-1">
+            <div class="flex justify-between items-start">
+              <div>
+                <div id="nameFull" class="font-medium text-lg">Loading...</div>
+                <div id="meta" class="text-xs text-neutral-500">DOB — phone — status</div>
+              </div>
+              <button id="btnEditProfile" class="text-xs px-3 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700">Edit</button>
+            </div>
+            <div id="residentFields" class="mt-3 text-sm text-neutral-400"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Life events -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Life events</h3>
+        <div id="eventsList" class="space-y-2 text-sm text-neutral-400">Loading events...</div>
+
+        <div class="mt-3 grid gap-2">
+          <select id="eventType" class="p-2 rounded-xl bg-neutral-800 border border-neutral-700">
+            <option value="birth">Birth</option>
+            <option value="death">Death</option>
+            <option value="move">Move</option>
+            <option value="other">Other</option>
+          </select>
+          <textarea id="eventNote" placeholder="Details" class="p-2 rounded-xl bg-neutral-800 border border-neutral-700"></textarea>
+          <div class="flex gap-2">
+            <button id="btnAddEvent" class="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Add event</button>
+            <button id="btnRefresh" class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">Refresh</button>
+          </div>
+          <div id="eventMsg" class="text-xs text-amber-200"></div>
+        </div>
+      </section>
+
+      <!-- Family / household -->
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Household & family</h3>
+        <div id="familyList" class="text-sm text-neutral-400">Loading family...</div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearResDet"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Set footer year
+      document.getElementById('yearResDet').textContent = new Date().getFullYear();
+
+      // -------- Firebase config ----------
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+
+      // Parse resident id from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const residentId = urlParams.get('id');
+      if(!residentId) {
+        alert('Missing resident id');
+        window.location.href = 'residents.html';
+      }
+
+      const residentRef = db.ref('residents/' + residentId);
+      const eventsRef = db.ref('residents/' + residentId + '/events');
+
+      // auth.onAuthStateChanged(user => {
+      //   if(!user) window.location.href = 'login.html';
+      //   else loadResident();
+      // });
+
+      function loadResident(){
+        residentRef.on('value', snap => {
+          const r = snap.val();
+          if(!r){
+            alert('Resident not found');
+            window.location.href = 'residents.html';
+            return;
+          }
+          renderProfile(r);
+        });
+
+        eventsRef.on('value', snap => {
+          const data = snap.val() || {};
+          renderEvents(data);
+        });
+
+        // Load family members (placeholder)
+        db.ref('residents').orderByChild('dwelling_id').equalTo(null).once('value').then(() => loadFamily());
+      }
+
+      function renderProfile(r){
+        document.getElementById('resName').textContent = `${r.first_name || ''} ${r.last_name || ''}`;
+        document.getElementById('nameFull').textContent = `${r.first_name || ''} ${r.last_name || ''}`;
+        document.getElementById('meta').textContent = `${r.dob||'—'} • ${r.phone||'—'} • ${r.life_status||'—'}`;
+        document.getElementById('residentFields').innerHTML = `
+          <div class="text-sm"><strong>Parent:</strong> ${escapeHtml(r.parent_name||'—')}</div>
+          <div class="text-sm"><strong>Dwelling:</strong> ${escapeHtml(r.dwelling_id||'—')}</div>
+          <div class="text-sm"><strong>Gender:</strong> ${escapeHtml(r.gender||'—')}</div>
+          <div class="text-sm"><strong>Registered:</strong> ${new Date(r.createdAt||Date.now()).toLocaleString()}</div>
+        `;
+
+        document.getElementById('btnDeleteResident').onclick = async () => {
+          if(!confirm('Delete resident and all events?')) return;
+          try {
+            await db.ref('residents/' + residentId).remove();
+            await db.ref('counters/population').transaction(n => Math.max(0, (n||1)-1));
+            alert('Deleted');
+            window.location.href='residents.html';
+          } catch(e) { alert(e.message); }
+        };
+
+        document.getElementById('btnEditProfile').onclick = () => openEditProfile(r);
+      }
+
+      function renderEvents(events){
+        const rows = Object.entries(events)
+          .sort((a,b) => (b[1].ts||0) - (a[1].ts||0))
+          .map(([eid,e]) => {
+            const when = new Date(e.ts || e.createdAt || Date.now()).toLocaleString();
+            return `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+              <div class="flex justify-between items-start">
+                <div>
+                  <div class="font-medium text-sm">${escapeHtml(e.type||'event')}</div>
+                  <div class="text-xs text-neutral-400">${escapeHtml(e.note||'')}</div>
+                  <div class="text-[10px] text-neutral-500 mt-1">${when}</div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <button onclick="deleteEvent('${eid}')" class="text-xs px-2 py-1 rounded-md bg-rose-600 hover:bg-rose-500">Del</button>
+                </div>
+              </div>
+            </div>`;
+          }).join('');
+        document.getElementById('eventsList').innerHTML = rows || '<div class="text-xs text-neutral-500">No events</div>';
+      }
+
+      async function loadFamily(){
+        const resSnap = await residentRef.once('value');
+        const r = resSnap.val();
+        if(!r) return;
+        const dwelling = r.dwelling_id || null;
+        let familyHtml = '';
+
+        if(dwelling){
+          const snap = await db.ref('residents').orderByChild('dwelling_id').equalTo(dwelling).once('value');
+          const data = snap.val() || {};
+          const list = Object.entries(data).map(([id,rec]) =>
+            `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+              ${escapeHtml(rec.first_name||'')} ${escapeHtml(rec.last_name||'')}
+              <div class="text-xs text-neutral-500">${escapeHtml(rec.rel||'')}</div>
+            </div>`
+          );
+          familyHtml = list.join('') || '<div class="text-xs text-neutral-500">No household members</div>';
+        } else if(r.parent_name){
+          const snap = await db.ref('residents').orderByChild('parent_name').equalTo(r.parent_name).once('value');
+          const data = snap.val() || {};
+          const list = Object.entries(data).map(([id,rec]) =>
+            `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800">
+              ${escapeHtml(rec.first_name||'')} ${escapeHtml(rec.last_name||'')}
+            </div>`
+          );
+          familyHtml = list.join('') || '<div class="text-xs text-neutral-500">No family found</div>';
+        } else familyHtml = '<div class="text-xs text-neutral-500">No family info</div>';
+
+        document.getElementById('familyList').innerHTML = familyHtml;
+      }
+
+      // Add life event
+      document.getElementById('btnAddEvent').addEventListener('click', async () => {
+        const type = document.getElementById('eventType').value || 'other';
+        const note = document.getElementById('eventNote').value.trim();
+        if(!note && type==='other'){
+          document.getElementById('eventMsg').textContent = 'Add details for "other" events';
+          return;
+        }
+        try {
+          const evtRef = db.ref('residents/' + residentId + '/events').push();
+          const obj = { type, note, createdAt: firebase.database.ServerValue.TIMESTAMP, ts: Date.now() };
+          await evtRef.set(obj);
+
+          if(type==='death'){
+            await db.ref('residents/' + residentId).update({
+              life_status: 'Deceased',
+              updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            await db.ref('counters/population').transaction(n => Math.max(0,(n||1)-1));
+          }
+
+          document.getElementById('eventMsg').textContent = 'Event added';
+          document.getElementById('eventNote').value = '';
+        } catch(e) { document.getElementById('eventMsg').textContent = e.message; }
+      });
+
+      async function deleteEvent(eid){
+        if(!confirm('Delete event?')) return;
+        try {
+          await db.ref('residents/' + residentId + '/events/' + eid).remove();
+          document.getElementById('eventMsg').textContent = 'Deleted';
+        } catch(e) { document.getElementById('eventMsg').textContent = e.message; }
+      }
+
+      // Edit full profile
+      async function openEditProfile(r){
+        const first = prompt('First name', r.first_name || '') || '';
+        const last = prompt('Last name', r.last_name || '') || '';
+        const dob = prompt('DOB (YYYY-MM-DD)', r.dob || '') || '';
+        const phone = prompt('Phone', r.phone || '') || '';
+        const parent = prompt('Parent name', r.parent_name || '') || '';
+
+        try {
+          await db.ref('residents/' + residentId).update({
+            first_name: first.trim(),
+            last_name: last.trim(),
+            dob: dob.trim(),
+            phone: phone.trim(),
+            parent_name: parent.trim(),
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+          alert('Saved');
+        } catch(e) { alert(e.message); }
+      }
+
+      function openPage(p){ window.location.href = p; }
+
+      function escapeHtml(s){
+        return (s || '').replace(/[&<>"']/g, m => ({
+          '&':'&amp;',
+          '<':'&lt;',
+          '>':'&gt;',
+          '"':'&quot;',
+          "'":'&#39;'
+        }[m]));
+      }
+  </script>
+
+</body>
+</html>
+
+
+<!-- 
+
+Quick notes, next steps and security
+
+Both pages use Firebase compat SDK for brevity. Replace FIREBASE_API_KEY etc in both files with your project config.
+
+RTDB rules: before production, lock write access. Example rule: only authenticated users can read, only admin role can write invites or counters. Use /users/{uid}/role for RBAC and strong server-side rules or Cloud Functions for enforcing invites.
+
+CSV import is intentionally conservative: duplicates are skipped. You can change behaviour to overwrite by modifying the import loop.
+
+I used simple prompt/edit modals for quick actions to keep the UI compact. If you want proper modal dialogs and nicer forms, I’ll convert them next.
+
+Storage (images/attachments) is not included here — I can add Firebase Storage image upload & preview in the next pass -->

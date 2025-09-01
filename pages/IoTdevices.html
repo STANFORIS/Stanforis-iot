@@ -1,0 +1,44 @@
+<div class="page-header">
+  <h2>Connected IoT Devices</h2>
+  <p>Monitor all devices with real-time sensor data and control actions. Hover over badges for more info.</p>
+</div>
+
+<div class="controls" style="margin-bottom:12px;">
+  <input type="text" id="device-search" placeholder="Search by name, type, or IP..." style="padding:6px; width:250px;">
+  <button id="btn-refresh">🔄 Refresh List</button>
+  <button id="btn-add">➕ Add Device</button>
+</div>
+
+<div class="table-container" style="overflow-x:auto;">
+  <table id="device-table" border="0" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse;">
+    <thead style="background:#111;color:#0ff;">
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>IP</th>
+        <th>MAC</th>
+        <th>Status</th>
+        <th>Last Seen</th>
+        <th>Sensor Data</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="device-list-body"></tbody>
+  </table>
+</div>
+<script src="../js/pages/IoTdevices.js"></script>
+
+<style>
+body { background:#111; color:#0ff; font-family:Arial,sans-serif; }
+table { width:100%; border-collapse:collapse; color:#0ff; }
+thead { background:#222; }
+tbody tr { background:#1a1a1a; }
+tbody tr:nth-child(even) { background:#111; }
+td, th { padding:8px; text-align:center; border:1px solid #0ff; }
+.status.online { color:#0f0; font-weight:bold; cursor:help; }
+.status.offline { color:#f00; font-weight:bold; cursor:help; }
+button { padding:4px 10px; border:none; border-radius:4px; cursor:pointer; margin-right:3px; background:#0ff; color:#000; }
+button:hover { background:#0cc; }
+input { border-radius:4px; border:1px solid #0ff; background:#111; color:#0ff; padding:4px 6px; }
+.table-container { max-height:450px; overflow-y:auto; }
+</style>

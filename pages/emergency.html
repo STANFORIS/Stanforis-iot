@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Emergency Center</title>
+<link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark light }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom) }
+    .scrollbar-thin::-webkit-scrollbar { height:6px; width:6px }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background:#2f2f2f; border-radius:8px }
+  </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+        <!-- Header -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="https://ui-avatars.com/api/?name=User&background=111111&color=ffffff"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Admin</p>
+          <p id="username" class="font-medium truncate">please wait....</p>
+        </div>
+    </header>
+    <section>
+      <div class="flex flex-col px-4 py-4">
+        <h1 class="text-lg font-semibold truncate"> Security Emergency</h1>
+        <p class="text-xs text-neutral-400">Be aware of any Alerts in this tab, they are security concerned</p>
+      </div>
+    </section>
+
+
+    <!-- Filters -->
+    <section class="px-4 py-3 space-y-3 border-b border-neutral-800 bg-neutral-950/60">
+      <div class="relative">
+        <input id="search" class="w-full px-3 py-2 pr-10 rounded-xl bg-neutral-900 border border-neutral-800 text-sm" placeholder="Search alerts…" data-filter="query" />
+        <span class="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500">⌕</span>
+      </div>
+      <div class="flex gap-2 text-xs">
+        <select class="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800" data-filter="type">
+          <option value="">All Types</option>
+          <option value="fire">🔥 Fire</option>
+          <option value="intrusion">🚨 Intrusion</option>
+          <option value="medical">💊 Medical</option>
+        </select>
+        <select class="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800" data-filter="status">
+          <option value="">Any Status</option>
+          <option value="open">Open</option>
+          <option value="acknowledged">Acknowledged</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Content -->
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <div id="emergencyList" class="space-y-3">
+        <!-- Alerts injected here -->
+        <div class="rounded-2xl bg-neutral-900 border border-neutral-800 p-3 flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <div class="text-2xl">🚨</div>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium truncate">Intrusion Alert</div>
+              <div class="text-[11px] text-neutral-400 truncate">Main Entrance</div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[10px] border border-red-800 text-red-300">Open</span>
+          </div>
+          <div class="text-xs">⏰ 12:45 PM</div>
+          <div class="flex gap-2 text-xs">
+            <button class="flex-1 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700" data-action="acknowledge">Acknowledge</button>
+            <button class="flex-1 px-2 py-1 rounded bg-red-600 hover:bg-red-500" data-action="resolve">Resolve</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Inspector / Slide-over -->
+    <aside id="inspector" class="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] bg-neutral-950/95 backdrop-blur border-l border-neutral-800 z-40 translate-x-full">
+      <div class="h-16 flex items-center justify-between px-4 border-b border-neutral-800 bg-neutral-900/80 sticky top-0">
+        <h3 class="font-medium" data-panel-title>Emergency</h3>
+        <button class="px-3 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-sm" data-action="close-panel">Close</button>
+      </div>
+      <div class="p-4 space-y-4 overflow-y-auto h-[calc(100%-4rem)]">
+        <div class="space-y-3 text-sm">
+          <div>Type: <span data-field="type">-</span></div>
+          <div>Location: <span data-field="location">-</span></div>
+          <div>Status: <span data-field="status">-</span></div>
+          <div>Reported: <span data-field="time">-</span></div>
+        </div>
+        <div class="flex gap-2">
+          <button class="flex-1 px-3 py-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-800" data-action="acknowledge">Acknowledge</button>
+          <button class="flex-1 px-3 py-2 rounded-xl bg-red-600/20 text-red-300 border border-red-800" data-action="resolve">Resolve</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Bottom Panel -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-3 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-2">
+          © <span id="year"></span> Stanforis Rwanda— All rights reserved
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Templates -->
+  <template id="tpl-card">
+    <div class="emergency-card rounded-2xl bg-neutral-900 border border-neutral-800 p-3 flex flex-col gap-2" data-id="">
+      <div class="flex items-center gap-2">
+        <div class="text-2xl" data-icon>🚨</div>
+        <div class="min-w-0 flex-1">
+          <div class="font-medium truncate" data-type>Alert Type</div>
+          <div class="text-[11px] text-neutral-400 truncate" data-location>Location</div>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[10px] border" data-status>Status</span>
+      </div>
+      <div class="text-xs">⏰ <span data-time>-</span></div>
+      <div class="flex gap-2 text-xs">
+        <button class="flex-1 px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700" data-action="acknowledge">Ack</button>
+        <button class="flex-1 px-2 py-1 rounded bg-red-600 hover:bg-red-500" data-action="resolve">Resolve</button>
+      </div>
+    </div>
+  </template>
+
+  <script type="module" src="../js/pages/emergency.js"></script>
+  <script>function openPage(page) {window.location.href = page;}</script>
+</body>
+</html>
+
+

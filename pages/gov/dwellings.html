@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stanforis — Dwellings</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div class="mx-auto max-w-md min-h-screen relative">
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('dashboard.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1"><p class="text-xs text-neutral-400">Dwellings</p><p class="font-medium">Household roster</p></div>
+        <button id="btnNewDwelling" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">＋</button>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex gap-2">
+          <input id="q" placeholder="Search dwelling id / address" class="flex-1 p-2 rounded-xl bg-neutral-800 border border-neutral-700"/>
+          <button id="btnSearch" class="py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700">Search</button>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Households</h3>
+        <div id="dwellingsList" class="space-y-2 text-sm text-neutral-400">Loading...</div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearDwell"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+      // Display current year
+      document.getElementById('yearDwell').textContent = new Date().getFullYear();
+
+      // Firebase config & initialization
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+      const dwellRef = db.ref('dwellings');
+      let dwellCache = {};
+
+      // Require login
+      // auth.onAuthStateChanged(u => {
+      //   if (!u) location.href = 'login.html';
+      //   else init();
+      // });
+
+      function init() {
+        // Attach event listeners
+        document.getElementById('btnNewDwelling').addEventListener('click', newDwellingPrompt);
+        document.getElementById('btnSearch').addEventListener('click', searchDwellings);
+
+        // Listen for dwellings data
+        dwellRef.on('value', snapshot => {
+          dwellCache = snapshot.val() || {};
+          renderList();
+        });
+      }
+
+      // Render the list of dwellings
+      function renderList() {
+        const items = Object.entries(dwellCache).map(([id, d]) => ({ id, ...d }));
+
+        if (!items.length) {
+          document.getElementById('dwellingsList').innerHTML =
+            '<div class="text-xs text-neutral-500">No dwellings</div>';
+          return;
+        }
+
+        const html = items
+          .sort((a, b) => (a.address || '').localeCompare(b.address || ''))
+          .map(d => {
+            const members = (d.members || []).length || 0;
+            const coords = d.lat && d.lng ? `${d.lat.toFixed(4)}, ${d.lng.toFixed(4)}` : '';
+            return `
+              <div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+                <div class="min-w-0">
+                  <div class="font-medium text-sm">${escapeHtml(d.address || ('Dwelling ' + d.id))}</div>
+                  <div class="text-xs text-neutral-500">${coords} • ${members} member(s)</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <a href="resident.html?id=${encodeURIComponent((d.members || [])[0] || '')}" class="px-2 py-1 rounded-md bg-neutral-800 text-xs">Open</a>
+                  <button onclick="assignDwellingPrompt('${d.id}')" class="px-2 py-1 rounded-md bg-neutral-800 text-xs">Assign</button>
+                  <button onclick="deleteDwelling('${d.id}')" class="px-2 py-1 rounded-md bg-rose-600 text-xs">Del</button>
+                </div>
+              </div>`;
+          })
+          .join('');
+
+        document.getElementById('dwellingsList').innerHTML = html;
+      }
+
+      // Add a new dwelling
+      function newDwellingPrompt() {
+        const address = prompt('Address / label');
+        if (!address) return;
+
+        const lat = parseFloat(prompt('Latitude (optional)') || '0') || null;
+        const lng = parseFloat(prompt('Longitude (optional)') || '0') || null;
+
+        const r = dwellRef.push();
+        r.set({ address, lat: lat || null, lng: lng || null, members: [] });
+      }
+
+      // Assign a resident to a dwelling
+      function assignDwellingPrompt(id) {
+        const uid = prompt('Resident id to add to household');
+        if (!uid) return;
+
+        const d = dwellCache[id] || {};
+        const members = Array.isArray(d.members) ? d.members : [];
+
+        if (members.includes(uid)) return alert('Already assigned');
+
+        members.push(uid);
+        dwellRef.child(id).update({ members });
+
+        // Also update resident dwelling_id
+        db.ref('residents/' + uid).update({ dwelling_id: id });
+      }
+
+      // Delete a dwelling
+      function deleteDwelling(id) {
+        if (!confirm('Delete dwelling?')) return;
+        dwellRef.child(id).remove();
+      }
+
+      // Search dwellings
+      function searchDwellings() {
+        const q = (document.getElementById('q').value || '').toLowerCase().trim();
+        const items = Object.entries(dwellCache).map(([id, d]) => ({ id, ...d }));
+
+        const filtered = items.filter(d =>
+          (d.address || '').toLowerCase().includes(q) ||
+          (d.id || '').toLowerCase().includes(q)
+        );
+
+        const html = filtered
+          .map(d => `
+            <div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+              <div class="min-w-0">
+                <div class="font-medium text-sm">${escapeHtml(d.address || d.id)}</div>
+                <div class="text-xs text-neutral-500">${(d.members || []).length} member(s)</div>
+              </div>
+              <div class="flex gap-2">
+                <button onclick="assignDwellingPrompt('${d.id}')" class="px-2 py-1 rounded-md bg-neutral-800 text-xs">Assign</button>
+              </div>
+            </div>`).join('') ||
+          '<div class="text-xs text-neutral-500">No results</div>';
+
+        document.getElementById('dwellingsList').innerHTML = html;
+      }
+
+      // Navigate to another page
+      function openPage(p) {
+        location.href = p;
+      }
+
+      // Escape HTML to prevent injection
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m]));
+      }
+  </script>
+
+</body>
+</html>

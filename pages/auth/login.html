@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stanforis Access</title>
+  <link href="../../css/output.css" rel="stylesheet">  <style>
+    :root{color-scheme:dark light}
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-thumb{background:#2f2f2f;border-radius:8px}
+    .safe-bottom{padding-bottom: env(safe-area-inset-bottom)}
+    .form-section{background:#1f1f1f;padding:16px;border-radius:12px;border:1px solid #3a3a3a;display:flex;flex-direction:column;gap:12px}
+    .form-section label{font-size:0.8rem;color:#a1a1a1;}
+    .form-section input{padding:8px;border-radius:8px;border:1px solid #3a3a3a;background:#111111;color:#fff;font-size:0.9rem;}
+    .form-section input:disabled{opacity:0.5;cursor:not-allowed;}
+    .form-extra{display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:#aaa;}
+    .btn-submit{background:#4f46e5;color:#fff;font-weight:600;padding:10px;border-radius:10px;transition:0.2s;}
+    .btn-submit:disabled{opacity:0.5;cursor:not-allowed;}
+    .link{color:#818cf8;text-decoration:underline; cursor:pointer;}
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative px-4 py-4 overflow-x-auto overflow-y-auto">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800 mb-4">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <h1 class="font-medium text-lg">Login</h1>
+      </div>
+    </header>
+
+    <!-- Login Form -->
+    <main class="space-y-6">
+      <section class="form-section">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="Enter your email">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password">
+
+        <div class="form-extra">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="rememberMe">
+            <span>Remember Me</span>
+          </label>
+          <a href="#" class="link">Forgot Password?</a>
+        </div>
+      <section class="form-section">
+        <button class="btn-submit w-full" id="loginBtn">Login</button>
+      </section>
+
+      <div class="text-center mt-4">
+        <span>Don't have an account?</span>
+        <button id="signup-link" class="underline text-indigo-400 ml-1">Signup</button>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script type="module" src="../../js/app.js"></script>
+  <script type="module" src="../../js/pages/auth/login.js"></script>
+</body>
+</html>

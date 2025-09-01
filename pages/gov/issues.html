@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Stanforis — Issues</title>
+  <link href="../../css/output.css" rel="stylesheet">
+  <style>:root{color-scheme:dark light} .safe-bottom{padding-bottom:env(safe-area-inset-bottom)}</style>
+</head>
+<body class="bg-neutral-950 text-neutral-100">
+  <div class="mx-auto max-w-md min-h-screen relative">
+
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <button onclick="openPage('dashboard.html')" class="p-2 rounded-xl bg-neutral-800">←</button>
+        <div class="flex-1"><p class="text-xs text-neutral-400">Issues & Reports</p><p class="font-medium">Triage inbox</p></div>
+        <button id="btnNewIssue" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">＋</button>
+      </div>
+    </header>
+
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <div class="flex gap-2 mb-3">
+          <input id="q" placeholder="Search title / reporter / id" class="flex-1 p-2 rounded-xl bg-neutral-800 border border-neutral-700"/>
+          <select id="filterStatus" class="p-2 rounded-xl bg-neutral-800 border border-neutral-700">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button id="btnSearch" class="flex-1 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">Apply</button>
+          <button id="btnExport" class="py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700">Export CSV</button>
+        </div>
+        <div id="issuesMsg" class="text-xs text-amber-200 mt-2"></div>
+      </section>
+
+      <section class="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <h3 class="font-medium mb-2">Open issues</h3>
+        <div id="issuesList" class="space-y-2 text-sm text-neutral-400">Loading...</div>
+      </section>
+    </main>
+
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-5 text-center text-[9px]">
+            <a href="dashboard.html" class="py-2 px-2 m-1 rounded-xl">Mudugudu</a>
+            <a href="devices.html" class="py-2 px-2 m-1 rounded-xl">Devices</a>
+            <a href="automation.html" class="py-2 px-2 m-1 rounded-xl">Scenes</a>
+            <a href="notifications.html" class="py-2 px-2 m-1 rounded-xl">Alerts</a>
+            <a href="settings.html" class="py-2 px-2 m-1 rounded-xl">⚙️</a>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="yearIssues"></span> Stanforis Rwanda — All rights reserved</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Display current year
+      document.getElementById('yearIssues').textContent = new Date().getFullYear();
+
+      // Firebase configuration & initialization
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+
+      // Require login
+      // auth.onAuthStateChanged(user => {
+      //   if (!user) location.href = 'login.html';
+      //   else init();
+      // });
+
+      const issuesRef = db.ref('issues');
+      let issuesCache = {};
+
+      function init() {
+        // Button event listeners
+        document.getElementById('btnNewIssue').addEventListener('click', newIssuePrompt);
+        document.getElementById('btnSearch').addEventListener('click', applyFilters);
+        document.getElementById('btnExport').addEventListener('click', exportCsv);
+
+        // Load issues
+        issuesRef.on('value', snap => {
+          issuesCache = snap.val() || {};
+          const list = Object.entries(issuesCache).map(([k, v]) => ({ id: k, ...v }));
+          renderList(list);
+        });
+      }
+
+      function renderList(list) {
+        if (!list.length) {
+          document.getElementById('issuesList').innerHTML = '<div class="text-xs text-neutral-500">No issues</div>';
+          return;
+        }
+
+        const html = list
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+          .map(it => {
+            const d = new Date(it.createdAt || Date.now()).toLocaleString();
+            return `<div class="p-2 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+                      <div class="min-w-0">
+                        <div class="font-medium text-sm truncate">${escapeHtml(it.title)}</div>
+                        <div class="text-[11px] text-neutral-500">${escapeHtml(it.type || '')} • ${escapeHtml(it.location || '')} • ${d}</div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <a href="issue.html?id=${encodeURIComponent(it.id)}" class="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-xs">Open</a>
+                        <div class="text-xs px-2 py-1 rounded-md ${it.status === 'resolved' ? 'bg-emerald-600' : 'bg-neutral-800'}">${escapeHtml(it.status || 'pending')}</div>
+                      </div>
+                    </div>`;
+          })
+          .join('');
+
+        document.getElementById('issuesList').innerHTML = html;
+      }
+
+      function newIssuePrompt() {
+        const title = prompt('Short title');
+        if (!title) return;
+        const desc = prompt('Details') || '';
+        const type = prompt('Type (Security/Health/Infra)') || 'General';
+        const loc = prompt('Location (Umudugudu/Dwelling ID)') || '';
+        createIssue({ title, desc, type, location: loc });
+      }
+
+      async function createIssue(obj) {
+        try {
+          const user = auth.currentUser;
+          if (!user) return alert('Login required');
+
+          const ref = issuesRef.push();
+          const payload = {
+            title: obj.title,
+            desc: obj.desc,
+            type: obj.type || 'General',
+            location: obj.location || '',
+            status: 'pending',
+            createdBy: user.uid,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+          };
+          await ref.set(payload);
+
+          // Update issue counter
+          await db.ref('counters/issues').transaction(n => (n || 0) + 1);
+
+          document.getElementById('issuesMsg').textContent = 'Issue created';
+          setTimeout(() => document.getElementById('issuesMsg').textContent = '', 4000);
+        } catch (e) {
+          document.getElementById('issuesMsg').textContent = e.message;
+        }
+      }
+
+      function applyFilters() {
+        const q = (document.getElementById('q').value || '').toLowerCase().trim();
+        const status = document.getElementById('filterStatus').value;
+        const items = Object.entries(issuesCache).map(([id, v]) => ({ id, ...v }));
+
+        const filtered = items.filter(it => {
+          if (status && it.status !== status) return false;
+          if (!q) return true;
+          return ((it.title || '') + (it.desc || '') + (it.location || '') + (it.type || '')).toLowerCase().includes(q);
+        });
+
+        renderList(filtered);
+      }
+
+      // Export CSV
+      function exportCsv() {
+        const rows = Object.entries(issuesCache).map(([id, v]) => [
+          id, v.title || '', v.status || '', v.type || '', v.location || '', v.createdBy || '', v.createdAt || ''
+        ]);
+
+        const csv = [
+          'id,title,status,type,location,createdBy,createdAt',
+          ...rows.map(r => r.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'issues-export.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function openPage(p) { location.href = p; }
+
+      function escapeHtml(s) {
+        return (s || '').replace(/[&<>"']/g, m => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m]));
+      }
+  </script>
+
+</body>
+</html>

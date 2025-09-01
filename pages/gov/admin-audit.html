@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stanforis — Audit</title>
+    <link href="../../css/output.css" rel="stylesheet">
+
+    <style>
+        :root {
+            color-scheme: dark light
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100">
+    <div class="mx-auto max-w-md min-h-screen relative">
+        <header class="sticky top-0 bg-neutral-900/80 border-b">
+            <div class="flex items-center px-4 h-16"><button onclick="openPage('dashboard.html')"
+                    class="p-2 rounded-xl bg-neutral-800">←</button>
+                <div class="flex-1">
+                    <p class="text-xs text-neutral-400">Audit Log</p>
+                    <p class="font-medium">Immutable events</p>
+                </div>
+            </div>
+        </header>
+        <main class="p-4 pb-24 space-y-4">
+            <section class="rounded-2xl border bg-neutral-900 p-4">
+                <div class="flex gap-2"><input id="q" placeholder="Search action / user"
+                        class="flex-1 p-2 rounded-xl bg-neutral-800" /><button id="btnSearch"
+                        class="py-2 px-3 rounded-xl bg-neutral-800">Search</button></div>
+            </section>
+            <section class="rounded-2xl border bg-neutral-900 p-4">
+                <h3 class="font-medium">Recent</h3>
+                <div id="log" class="text-sm text-neutral-400">Loading...</div>
+            </section>
+        </main>
+        <footer class="fixed bottom-0 inset-x-0 bg-neutral-900 border-t">
+            <div class="max-w-md mx-auto">
+                <div class="grid grid-cols-5 text-[9px]"><a href="dashboard.html">Mudugudu</a><a
+                        href="devices.html">Devices</a><a href="automation.html">Scenes</a><a
+                        href="notifications.html">Alerts</a><a href="settings.html">⚙️</a></div>
+                <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="y"></span> Stanforis
+                    Rwanda</div>
+            </div>
+        </footer>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        /* ========== Set Footer Year ========== */
+        document.getElementById('y').textContent = new Date().getFullYear();
+
+        /* ========== Firebase Configuration ========== */
+        const firebaseConfig = {
+            apiKey: "FIREBASE_API_KEY",
+            authDomain: "PROJECT.firebaseapp.com",
+            databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+            projectId: "PROJECT",
+            storageBucket: "PROJECT.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Firebase services
+        const auth = firebase.auth();
+        const db   = firebase.database();
+
+        // Reference to audit logs
+        const logRef = db.ref('audit');
+
+        /* ========== Authentication Check ========== */
+        // auth.onAuthStateChanged(user => {
+        //     if (!user) {
+        //         // Redirect to login if not signed in
+        //         location.href = 'login.html';
+        //     } else {
+        //         init();
+        //     }
+        // });
+
+        /* ========== Initialize Page ========== */
+        function init() {
+            // Load last 200 logs in realtime
+            logRef.limitToLast(200).on('value', snapshot => {
+                render(snapshot.val() || {});
+            });
+
+            // Attach search button event
+            document.getElementById('btnSearch').addEventListener('click', search);
+        }
+
+        /* ========== Render Logs ========== */
+        function render(data) {
+            const rows = Object.entries(data)
+                .reverse()
+                .map(([key, value]) => `
+                    <div class="p-2 rounded-xl bg-neutral-900 border">
+                        <div class="text-xs text-neutral-400">
+                            ${new Date(value.ts || Date.now()).toLocaleString()} • ${escape(value.user || '')}
+                        </div>
+                        <div class="font-medium">${escape(value.action || '')}</div>
+                        <div class="text-xs text-neutral-500">${escape(value.meta || '')}</div>
+                    </div>
+                `)
+                .join('');
+
+            document.getElementById('log').innerHTML =
+                rows || '<div class="text-xs text-neutral-500">No logs</div>';
+        }
+
+        /* ========== Search Logs ========== */
+        function search() {
+            const q = (document.getElementById('q').value || '').toLowerCase().trim();
+
+            logRef.once('value').then(snapshot => {
+                const data = snapshot.val() || {};
+                const rows = Object.entries(data)
+                    .filter(([key, value]) =>
+                        (value.action || '').toLowerCase().includes(q) ||
+                        (value.user || '').toLowerCase().includes(q)
+                    )
+                    .reverse()
+                    .map(([key, value]) => `
+                        <div class="p-2 rounded-xl bg-neutral-900 border">
+                            <div class="text-xs text-neutral-400">
+                                ${new Date(value.ts || Date.now()).toLocaleString()} • ${escape(value.user || '')}
+                            </div>
+                            <div class="font-medium">${escape(value.action || '')}</div>
+                        </div>
+                    `)
+                    .join('');
+
+                document.getElementById('log').innerHTML =
+                    rows || '<div class="text-xs text-neutral-500">No results</div>';
+            });
+        }
+
+        /* ========== Utilities ========== */
+        // Navigate to another page
+        function openPage(p) {
+            location.href = p;
+        }
+
+        // Escape HTML to prevent injection
+        function escape(s) {
+            return (s || '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m]));
+        }
+        </script>
+
+</body>
+</html>

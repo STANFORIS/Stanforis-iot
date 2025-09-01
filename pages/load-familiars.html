@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IoT SaaS — Staff</title>
+<link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark light}
+    ::-webkit-scrollbar{width:8px;height:8px}
+    ::-webkit-scrollbar-thumb{background:#2f2f2f;border-radius:8px}
+    .side-rail{position:absolute;top:64px;bottom:84px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+    .rail-btn{width:18px;height:18px;border-radius:4px;background:#3a3a3a;display:flex;align-items:center;justify-content:center}
+    .safe-bottom{padding-bottom: env(safe-area-inset-bottom)}
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="https://ui-avatars.com/api/?name=User&background=111111&color=ffffff"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Admin</p>
+          <p id="username" class="font-medium truncate">please wait....</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs" title="Refresh list" data-action="refresh">🔄 Refresh</button>
+          <button class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs" title="Add device" data-action="open-add">➕ Add</button>
+        </div>
+    </header>
+
+
+    <!-- Side Rails -->
+    <div class="side-rail left-0 pl-2 hidden sm:flex">
+      <button class="rail-btn" onclick="openPage('left1.html')"></button>
+      <button class="rail-btn" onclick="openPage('left2.html')"></button>
+      <button class="rail-btn" onclick="openPage('left3.html')"></button>
+    </div>
+    <div class="side-rail right-0 pr-2 hidden sm:flex">
+      <button class="rail-btn" onclick="openPage('right1.html')"></button>
+      <button class="rail-btn" onclick="openPage('right2.html')"></button>
+      <button class="rail-btn" onclick="openPage('right3.html')"></button>
+    </div>
+
+    <!-- Content -->
+    <main class="px-4 pt-4 pb-24 space-y-4">
+      
+      <!-- Add New Staff -->
+      <section class="flex justify-between items-center">
+        <h2 class="font-medium text-lg">Familiars Management</h2>
+        <button class="py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm" onclick="addStaff()">Add New Staff</button>
+      </section>
+
+      <!-- Staff List -->
+      <section id="staffList" class="space-y-3 max-h-[60vh] overflow-y-auto">
+        <!-- Example Staff Card -->
+        <div class="p-3 rounded-2xl bg-neutral-800 border border-neutral-700 flex justify-between items-center hover:bg-neutral-700">
+          <div>
+            <span class="font-medium">Alice Johnson</span>
+            <p class="text-xs text-neutral-400">Role: Operator</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-green-600 hover:bg-green-500" onclick="toggleStaffStatus(this)">Active</button>
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-indigo-600 hover:bg-indigo-500" onclick="editStaff(this)">Edit</button>
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-red-600 hover:bg-red-500" onclick="deleteStaff(this)">Delete</button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-2xl bg-neutral-800 border border-neutral-700 flex justify-between items-center hover:bg-neutral-700">
+          <div>
+            <span class="font-medium">Bob Smith</span>
+            <p class="text-xs text-neutral-400">Role: Admin</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-green-600 hover:bg-green-500" onclick="toggleStaffStatus(this)">Active</button>
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-indigo-600 hover:bg-indigo-500" onclick="editStaff(this)">Edit</button>
+            <button class="text-xs px-2 py-0.5 rounded-xl bg-red-600 hover:bg-red-500" onclick="deleteStaff(this)">Delete</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Panel -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-3 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-2">
+          © <span id="year"></span> Stanforis Rwanda— All rights reserved
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function toast(msg){ alert(msg); }
+    // function openPage(page){ toast('Navigate to ' + page); }
+
+    function toggleStaffStatus(btn){
+      if(btn.textContent === 'Active'){
+        btn.textContent = 'Inactive';
+        btn.className = 'text-xs px-2 py-0.5 rounded-xl bg-red-600 hover:bg-red-500';
+      } else {
+        btn.textContent = 'Active';
+        btn.className = 'text-xs px-2 py-0.5 rounded-xl bg-green-600 hover:bg-green-500';
+      }
+      toast('Staff status toggled');
+    }
+
+    function editStaff(btn){
+      toast('Open edit staff form');
+    }
+
+    function deleteStaff(btn){
+      const card = btn.closest('div.p-3');
+      card.remove();
+      toast('Staff deleted');
+    }
+
+    function addStaff(){
+      toast('Open add new staff form');
+    }
+    function openPage(page) {window.location.href = page;}
+  </script>
+
+  <script type="module" src="../js/pages/load-familiars.js"></script>
+</body>
+</html>

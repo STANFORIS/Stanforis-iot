@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Devices</title>
+  <link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark light}
+    .safe-bottom{padding-bottom: env(safe-area-inset-bottom)}
+    .sticky-ios{position: sticky; top: 0}
+    .scrollbar-thin::-webkit-scrollbar{height:6px;width:6px}
+    .scrollbar-thin::-webkit-scrollbar-thumb{background:#2f2f2f;border-radius:8px}
+    .hidden-template{display:none !important}
+  </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="https://ui-avatars.com/api/?name=User&background=111111&color=ffffff"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Admin</p>
+          <p id="username" class="font-medium truncate">please wait....</p>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs" title="Refresh list" data-action="refresh">🔄 Refresh</button>
+          <button class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs" title="Add device" data-action="open-add">➕ Add</button>
+        </div>
+    </header>
+
+
+    <!-- FILTERS -->
+    <section class="px-4 py-2 space-y-2 border-b border-neutral-800 bg-neutral-950/60 text-xs">
+      <div class="flex gap-2">
+        <div class="relative flex-1">
+          <input id="search" class="w-full px-2 py-1 pr-8 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" placeholder="Search name, type, IP..." data-filter="query" />
+          <span class="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500">⌕</span>
+        </div>
+        <button class="px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" data-action="clear-filters">✖</button>
+      </div>
+      <div class="flex gap-2 text-xs">
+        <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1">
+          <span class="text-neutral-400">Type</span>
+          <select class="bg-transparent outline-none text-xs" data-filter="type">
+            <option value="">All</option>
+            <option value="camera">📷 Camera</option>
+            <option value="sensor">🌡️ Sensor</option>
+            <option value="actuator">🔌 Actuator</option>
+            <option value="gateway">🛰️ Gateway</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1">
+          <span class="text-neutral-400">Status</span>
+          <select class="bg-transparent outline-none text-xs" data-filter="status">
+            <option value="">Any</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1">
+          <span class="text-neutral-400">Sort</span>
+          <select class="bg-transparent outline-none text-xs" data-sort>
+            <option value="name">Name</option>
+            <option value="status">Status</option>
+            <option value="lastSeen">Last seen</option>
+            <option value="type">Type</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+  <!-- TABLE VIEW -->
+  <main class="px-4 pt-2 pb-28 overflow-x-auto">
+    <table class="w-full text-xs table-fixed min-w-[640px]">
+      <thead>
+        <tr class="bg-neutral-900 text-[9px]">
+          <th class="p-1 w-6 text-left">
+            <input type="checkbox" data-select="all" aria-label="Select all"/>
+          </th>
+          <th class="p-1 w-24 truncate text-left">Name</th>
+          <th class="p-1 w-20 truncate text-center">Type</th>
+          <th class="p-1 w-28 truncate text-center">IP</th>
+          <th class="p-1 w-32 truncate text-center">MAC</th>
+          <th class="p-1 w-20 text-center">Status</th>
+          <th class="p-1 w-40 text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="deviceBody">
+        <tr>
+          <td colspan="7" class="p-2 text-neutral-500 text-center">
+            Loading devices…
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+
+
+    <!-- OPTIONAL: HORIZONTAL SCROLL CARDS -->
+    <section id="cardScroll" class="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-thin hidden">
+      <!-- Compact cards injected by JS -->
+    </section>
+
+  <!-- ADD MODAL -->
+  <div id="modalBackdrop" class="fixed inset-0 bg-black/60 hidden z-50"></div>
+  <section id="addModal" 
+    class="fixed inset-x-0 top-20 mx-auto max-w-xs rounded-xl border border-neutral-800 bg-neutral-950 z-50 hidden flex flex-col max-h-[80vh]">
+    
+    <!-- Header -->
+    <div class="p-3 border-b border-neutral-800 flex items-center justify-between flex-shrink-0">
+      <h3 class="font-medium text-xs">Add Device</h3>
+      <button class="px-2 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs" data-modal="close">✖</button>
+    </div>
+    
+    <!-- Scrollable body -->
+    <div class="p-3 space-y-2 text-xs overflow-y-auto flex-1">
+      <label>Name 
+        <input class="w-full px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" data-add="name"/>
+      </label>
+      <label>Type
+        <select class="w-full px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" data-add="type">
+          <option value="camera">📷 Camera</option>
+          <option value="sensor">🌡️ Sensor</option>
+          <option value="actuator">🔌 Actuator</option>
+          <option value="gateway">🛰️ Gateway</option>
+        </select>
+      </label>
+      <div class="grid grid-cols-2 gap-2">
+        <label>IP 
+          <input class="w-full px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" data-add="ip"/>
+        </label>
+        <label>MAC 
+          <input class="w-full px-2 py-1 rounded-xl bg-neutral-900 border border-neutral-800 text-xs" data-add="mac"/>
+        </label>
+      </div>
+    </div>
+  
+  <!-- Footer -->
+  <div class="p-3 border-t border-neutral-800 flex justify-end gap-2 flex-shrink-0">
+    <button class="px-3 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs" data-modal="cancel">Cancel</button>
+    <button class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs" data-modal="submit-add">Save</button>
+  </div>
+</section>
+
+
+    <!-- FOOTER NAV -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-2 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-1">
+          © <span id="year"></span> Stanforis Rwanda
+        </div>
+      </div>
+    </footer>
+
+    <!-- TEMPLATES -->
+    <template id="tpl-row">
+      <tr class="device-row" data-id="">
+        <td class="p-1"><input type="checkbox" data-select/></td>
+        <td class="p-1 truncate"><span data-name>Device</span></td>
+        <td class="p-1 text-center truncate" data-type>Type</td>
+        <td class="p-1 text-center truncate" data-ip>-</td>
+        <td class="p-1 text-center truncate" data-mac>-</td>
+        <td class="p-1 text-center"><span class="px-1 py-0.5 rounded-full text-[10px] border" data-status>Online</span></td>
+        <td class="p-1 text-center space-x-1">
+          <button class="px-1 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-[9px]" data-action="toggle">Toggle</button>
+          <button class="px-1 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-[9px]" data-action="edit">Edit</button>
+          <button class="px-1 py-0.5 rounded bg-red-600 hover:bg-red-500 text-[9px]" data-action="remove">Remove</button>
+        </td>
+      </tr>
+    </template>
+
+    <!-- IMPORT SCRIPTS -->
+    <script type="module" src="../js/firebase.js"></script>
+    <script type="module" src="../js/pages/devices.js"></script>
+  </div>
+  <script>
+  window.openPage = function(page){
+    window.location.href = page;
+  }
+ </script>
+
+</body>
+</html>

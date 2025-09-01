@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>IoT SaaS — Register Familiar</title>
+<link href="../css/output.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark light }
+    ::-webkit-scrollbar { width: 6px; height: 6px }
+    ::-webkit-scrollbar-thumb { background: #2f2f2f; border-radius: 8px }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom) }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-indigo-500/40">
+  <div id="app" class="mx-auto max-w-md min-h-screen relative">
+
+
+    <!-- Navbar -->
+    <header class="sticky top-0 z-30 bg-neutral-900/80 backdrop-blur border-b border-neutral-800">
+      <div class="flex items-center gap-3 px-4 h-16">
+        <img id="profileAvatar"src="https://ui-avatars.com/api/?name=User&background=111111&color=ffffff"alt="avatar"class="w-9 h-9 rounded-full ring-2 ring-neutral-700 cursor-pointer"title="Click to update profile picture" /> <input type="file" id="avatarUploadInput" accept="image/*" class="hidden" />
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-neutral-400 leading-tight">Admin</p>
+          <p id="username" class="font-medium truncate">please wait....</p>
+        </div>
+      </header>
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-4">
+
+      <!-- Name -->
+      <div>
+        <label class="block text-sm mb-1">Full Name</label>
+        <input id="name" type="text" placeholder="John Doe"
+          class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800" />
+      </div>
+
+      <!-- Role -->
+      <div>
+        <label class="block text-sm mb-1">Role</label>
+        <input id="role" type="text" placeholder="Family / Staff / Visitor"
+          class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800" />
+      </div>
+
+      <!-- Contact -->
+      <div>
+        <label class="block text-sm mb-1">Email / Phone</label>
+        <input id="contact" type="text" placeholder="example@email.com or +250..."
+          class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800" />
+      </div>
+
+      <!-- Capture photo -->
+      <div>
+        <button id="captureBtn" class="w-full py-2 rounded-xl bg-indigo-600">📷 Capture Photo</button>
+      </div>
+
+      <!-- Photo Preview -->
+      <div id="photoPreview" class="hidden border border-neutral-800 rounded-xl p-2">
+        <p class="text-sm text-neutral-400 mb-1">Captured photo:</p>
+        <img id="photoImg" src="" alt="Preview" class="w-32 h-32 object-cover rounded-xl" />
+      </div>
+
+      <!-- Preview Card -->
+      <div id="previewCard" class="hidden border border-neutral-800 bg-neutral-900 rounded-xl p-4">
+        <h2 class="font-semibold mb-2">Preview</h2>
+        <div id="previewContent" class="text-sm text-neutral-300"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2">
+        <button id="cancelBtn" class="flex-1 py-2 rounded-xl bg-neutral-700">Cancel</button>
+        <button id="saveBtn" class="flex-1 py-2 rounded-xl bg-green-600">Register</button>
+      </div>
+    </main>
+
+    <!-- Bottom Panel -->
+    <footer class="safe-bottom fixed bottom-0 inset-x-0 z-30">
+      <div class="mx-auto max-w-md">
+        <nav class="bg-neutral-900 border-t border-neutral-800">
+          <div class="grid grid-cols-4 text-center text-xs">
+            <button class="py-3 hover:bg-neutral-800" onclick="openPage('dashboard.html')">Back</button>
+          </div>
+        </nav>
+        <div class="bg-neutral-950 text-[10px] text-neutral-500 text-center py-2">
+          © <span id="year"></span> Stanforis Rwanda— All rights reserved
+        </div>
+      </div>
+    </footer>
+  </div>
+  <script>function openPage(page) {window.location.href = page;}</script>
+  <script type="module" src="../js/pages/register-familiar.js"></script>
+ 
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stanforis — Exports</title>
+    <link href="../../css/output.css" rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: dark light
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-100">
+    <div class="mx-auto max-w-md min-h-screen relative">
+        <header class="sticky top-0 bg-neutral-900/80 border-b">
+            <div class="flex items-center px-4 h-16"><button onclick="openPage('dashboard.html')"
+                    class="p-2 rounded-xl bg-neutral-800">←</button>
+                <div class="flex-1">
+                    <p class="text-xs text-neutral-400">Exports</p>
+                    <p class="font-medium">CSV / Parquet (demo)</p>
+                </div>
+            </div>
+        </header>
+        <main class="p-4 pb-24 space-y-4">
+            <section class="rounded-2xl border bg-neutral-900 p-4"><button id="exportResidents"
+                    class="py-2 w-full rounded-xl bg-emerald-600">Export Residents CSV</button>
+                <div id="msg" class="text-xs text-amber-200 mt-2"></div>
+            </section>
+        </main>
+        <footer class="fixed bottom-0 inset-x-0 bg-neutral-900 border-t">
+            <div class="max-w-md mx-auto">
+                <div class="grid grid-cols-5 text-[9px]"><a href="dashboard.html">Mudugudu</a><a
+                        href="devices.html">Devices</a><a href="automation.html">Scenes</a><a
+                        href="notifications.html">Alerts</a><a href="settings.html">⚙️</a></div>
+                <div class="bg-neutral-950 text-[8px] text-neutral-500 text-center py-2">©<span id="y"></span> Stanforis
+                    Rwanda</div>
+            </div>
+        </footer>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+      // Display current year
+      document.getElementById('y').textContent = new Date().getFullYear();
+
+      // Firebase configuration & initialization
+      const firebaseConfig = {
+        apiKey: "FIREBASE_API_KEY",
+        authDomain: "PROJECT.firebaseapp.com",
+        databaseURL: "https://PROJECT-default-rtdb.firebaseio.com",
+        projectId: "PROJECT",
+        storageBucket: "PROJECT.appspot.com",
+        messagingSenderId: "SENDER_ID",
+        appId: "APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+
+      const auth = firebase.auth();
+      const db = firebase.database();
+
+      // // Require login
+      // auth.onAuthStateChanged(u => {
+      //   if (!u) location.href = 'login.html';
+      //   else init();
+      // });
+
+      function init() {
+        // Export button listener
+        document.getElementById('exportResidents').addEventListener('click', async () => {
+          const snap = await db.ref('residents').once('value');
+          const data = snap.val() || {};
+
+          const csv = toCsv(data);
+          download(csv, 'residents.csv');
+
+          document.getElementById('msg').textContent = 'Export done';
+          setTimeout(() => document.getElementById('msg').textContent = '', 3000);
+        });
+      }
+
+      // Convert JSON object to CSV string
+      function toCsv(obj) {
+        const rows = [];
+        const keys = new Set();
+
+        // Collect all unique keys
+        Object.values(obj).forEach(v => Object.keys(v || {}).forEach(k => keys.add(k)));
+        const head = Array.from(keys);
+        rows.push(head.join(','));
+
+        // Add data rows
+        Object.values(obj).forEach(v => {
+          const row = head.map(h => `"${String((v || {})[h] || '').replace(/"/g, '""')}"`).join(',');
+          rows.push(row);
+        });
+
+        return rows.join('\n');
+      }
+
+      // Trigger download of CSV file
+      function download(text, name) {
+        const blob = new Blob([text], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+
+        URL.revokeObjectURL(url);
+      }
+
+      // Navigate to another page
+      function openPage(p) {
+        location.href = p;
+      }
+  </script>
+
+</body>
+
+</html>
